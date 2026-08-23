@@ -36,4 +36,13 @@ class InvoicePdfTest extends Base
         $bytes = (new InvoicePdf($this->container))->render($this->snapshot('draft'));
         $this->assertStringStartsWith('%PDF-', $bytes);
     }
+
+    public function testNonAsciiCurrencySymbolRenders(): void
+    {
+        $snapshot = $this->snapshot();
+        $snapshot['currency'] = ['code' => 'GBP', 'symbol' => '£'];
+        $bytes = (new InvoicePdf($this->container))->render($snapshot);
+        $this->assertStringStartsWith('%PDF-', $bytes);
+        $this->assertGreaterThan(800, strlen($bytes));
+    }
 }

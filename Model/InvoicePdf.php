@@ -51,8 +51,8 @@ class InvoicePdf extends Base
         foreach ($s['line_items'] ?? [] as $li) {
             $pdf->Cell(95, 7, $this->enc((string) $li['label']), 1);
             $pdf->Cell(25, 7, number_format((float) $li['hours'], 2), 1, 0, 'R');
-            $pdf->Cell(30, 7, $sym . number_format($rate, 2), 1, 0, 'R');
-            $pdf->Cell(30, 7, $sym . number_format((float) $li['amount'], 2), 1, 1, 'R');
+            $pdf->Cell(30, 7, $this->enc($sym . number_format($rate, 2)), 1, 0, 'R');
+            $pdf->Cell(30, 7, $this->enc($sym . number_format((float) $li['amount'], 2)), 1, 1, 'R');
         }
 
         // Totals
@@ -86,7 +86,7 @@ class InvoicePdf extends Base
     {
         $pdf->Cell(120, 7, '', 0);
         $pdf->Cell(30, 7, $this->enc($label), $bold ? 1 : 0, 0, 'R');
-        $pdf->Cell(30, 7, $sym . number_format($amount, 2), 1, 1, 'R');
+        $pdf->Cell(30, 7, $this->enc($sym . number_format($amount, 2)), 1, 1, 'R');
     }
 
     private function rateFromSnapshot(array $s): float
