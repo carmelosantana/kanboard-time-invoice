@@ -101,9 +101,20 @@ class InvoicePdf extends Base
         return 0.0;
     }
 
+    /** UTF-8 -> Windows-1252 (cp1252) bytes for FPDF core fonts. Portable: uses
+     *  mbstring, not iconv transliteration (unsupported on musl/Alpine, where it
+     *  warns and corrupts the PDF byte stream). Chars absent from cp1252 -> '?'. */
+    public static function toCp1252(string $s): string
+    {
+        $prev = mb_substitute_character();
+        mb_substitute_character(0x3F); // '?'
+        $out = mb_convert_encoding($s, 'Windows-1252', 'UTF-8');
+        mb_substitute_character($prev);
+        return $out;
+    }
+
     private function enc(string $s): string
     {
-        $out = iconv('UTF-8', 'windows-1252//TRANSLIT', $s);
-        return $out === false ? $s : $out;
+        return self::toCp1252($s);
     }
 }

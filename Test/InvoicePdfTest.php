@@ -45,4 +45,11 @@ class InvoicePdfTest extends Base
         $this->assertStringStartsWith('%PDF-', $bytes);
         $this->assertGreaterThan(800, strlen($bytes));
     }
+
+    public function testToCp1252ProducesCorrectBytes(): void
+    {
+        $this->assertSame('Hello', \Kanboard\Plugin\TimeInvoice\Model\InvoicePdf::toCp1252('Hello'));
+        $this->assertSame("\xA3", \Kanboard\Plugin\TimeInvoice\Model\InvoicePdf::toCp1252('£')); // GBP U+00A3 -> 0xA3
+        $this->assertSame("\x80", \Kanboard\Plugin\TimeInvoice\Model\InvoicePdf::toCp1252('€')); // EUR U+20AC -> 0x80
+    }
 }
