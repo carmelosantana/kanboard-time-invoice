@@ -18,7 +18,7 @@ class InvoiceModel extends Base
 
     public function createDraft(int $projectId, int $userId, array $draft): string
     {
-        $id = $this->newId();
+        $id = (! empty($draft['id']) && is_string($draft['id'])) ? $draft['id'] : $this->newId();
         $record = array_merge($draft, [
             'id'         => $id,
             'project_id' => $projectId,

@@ -59,6 +59,22 @@ class InvoiceModelTest extends Base
         $this->assertSame('INV-2026-001', $sentB['number']);
     }
 
+    public function testCreateDraftReusesProvidedId(): void
+    {
+        $pid = $this->seedProject();
+        $m = new InvoiceModel($this->container);
+        $id = $m->createDraft($pid, 1, ['rate' => 100.0]);
+
+        // Editing in place: pass the existing id back — same id round-trips, no new row.
+        $again = $m->createDraft($pid, 1, ['id' => $id, 'rate' => 175.0]);
+        $this->assertSame($id, $again);
+
+        $rec = $m->load($pid, $id);
+        $this->assertSame($id, $rec['id']);
+        $this->assertSame(175.0, $rec['rate']);
+        $this->assertCount(1, $m->listByProject($pid));
+    }
+
     public function testListAllSpansProjects(): void
     {
         $p1 = $this->seedProject();

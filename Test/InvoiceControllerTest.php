@@ -14,4 +14,14 @@ class InvoiceControllerTest extends Base
         $this->container['timeReportModel'] = fn ($x) => new stdClass();
         $this->assertTrue($ref->invoke($c));
     }
+
+    public function testGlobalDefaultsDecodeFromConfig(): void
+    {
+        $this->container['configModel']->save(['timeinvoice_business' => json_encode(['name' => 'Me'])]);
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'globalDefaults');
+        $m->setAccessible(true);
+        $defaults = $m->invoke($c);
+        $this->assertSame('Me', $defaults['business']['name']);
+    }
 }
