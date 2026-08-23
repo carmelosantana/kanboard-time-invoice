@@ -1,0 +1,39 @@
+<?php
+require_once 'tests/units/Base.php';
+use KanboardTests\units\Base;
+use Kanboard\Plugin\TimeInvoice\Model\InvoicePdf;
+
+class InvoicePdfTest extends Base
+{
+    private function snapshot(string $status = 'sent'): array
+    {
+        return [
+            'status'     => $status,
+            'number'     => $status === 'draft' ? null : 'INV-2026-001',
+            'issue_date' => '2026-08-23',
+            'due_date'   => '2026-09-22',
+            'range'      => ['start' => '2026-08-01', 'end' => '2026-08-31'],
+            'currency'   => ['code' => 'USD', 'symbol' => '$'],
+            'business'   => ['name' => 'Carmelo Santana', 'address' => "Newburgh, NY", 'email' => 'me@carmelosantana.com'],
+            'client'     => ['name' => 'Acme Inc', 'address' => "123 Main St", 'email' => 'ap@acme.test'],
+            'line_items' => [['label' => '#1 Homepage build', 'hours' => 8.5, 'amount' => 1275.0]],
+            'subtotal'   => 1275.0,
+            'tax'        => ['enabled' => true, 'rate' => 8.875, 'amount' => 113.16],
+            'total'      => 1388.16,
+            'notes'      => 'Thank you for your business.',
+        ];
+    }
+
+    public function testRendersValidPdf(): void
+    {
+        $bytes = (new InvoicePdf($this->container))->render($this->snapshot());
+        $this->assertStringStartsWith('%PDF-', $bytes);
+        $this->assertGreaterThan(800, strlen($bytes));
+    }
+
+    public function testDraftAlsoRenders(): void
+    {
+        $bytes = (new InvoicePdf($this->container))->render($this->snapshot('draft'));
+        $this->assertStringStartsWith('%PDF-', $bytes);
+    }
+}

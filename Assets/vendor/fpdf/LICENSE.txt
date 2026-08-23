@@ -1,0 +1,13 @@
+FPDF — Version 1.86
+Author: Olivier PLATHEY
+Source: http://www.fpdf.org/
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to no restriction.
+
+FPDF is a free PHP class released under a permissive license: there is no
+usage restriction. You may embed it freely in your application (commercial
+or not), with or without modifications.
+
+Vendored verbatim into the TimeInvoice plugin (buildless, no Composer).
