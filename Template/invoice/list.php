@@ -7,7 +7,7 @@
         <p><?= $this->url->link(t('New invoice'), 'InvoiceController', 'form', array('plugin' => 'TimeInvoice', 'project_id' => $project['id']), false, 'btn btn-blue') ?></p>
     <?php endif ?>
 
-    <p class="timeinvoice-outstanding"><?= t('Outstanding') ?>: <?= $this->helper->invoice->money((float) $outstanding, array('symbol' => '$')) ?></p>
+    <p class="timeinvoice-outstanding"><?= t('Outstanding') ?>: <?= $this->helper->invoice->money((float) $outstanding, $currency ?? array('symbol' => '$')) ?></p>
 
     <?php if (empty($invoices)): ?>
         <p class="alert"><?= t('No invoices yet.') ?></p>

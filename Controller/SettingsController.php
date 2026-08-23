@@ -23,6 +23,10 @@ class SettingsController extends BaseController
 
     public function show(): void
     {
+        if (! $this->userSession->isAdmin()) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', array('plugin' => 'TimeInvoice')));
+            return;
+        }
         $this->response->html($this->helper->layout->app('TimeInvoice:invoice/settings', [
             'title'  => t('Invoice settings'),
             'values' => $this->currentSettings(),
@@ -31,6 +35,10 @@ class SettingsController extends BaseController
 
     public function save(): void
     {
+        if (! $this->userSession->isAdmin()) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', array('plugin' => 'TimeInvoice')));
+            return;
+        }
         $this->checkCSRFForm();
         $v = $this->request->getValues();
         $this->configModel->save([

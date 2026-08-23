@@ -24,6 +24,7 @@ class InvoiceController extends BaseController
             $this->response->html($this->helper->layout->app('TimeInvoice:invoice/list', [
                 'title' => t('Invoices'), 'missing_dependency' => true,
                 'invoices' => [], 'outstanding' => 0.0, 'project' => null,
+                'currency' => array('code' => 'USD', 'symbol' => '$'),
             ]));
             return;
         }
@@ -35,6 +36,7 @@ class InvoiceController extends BaseController
             'outstanding' => $this->invoiceModel->outstandingTotal($pids),
             'project'     => null,
             'missing_dependency' => false,
+            'currency'    => $this->globalDefaults()['currency'] ?? array('code' => 'USD', 'symbol' => '$'),
         ]));
     }
 
@@ -53,6 +55,7 @@ class InvoiceController extends BaseController
             'outstanding' => $this->invoiceModel->outstandingTotal([$projectId]),
             'project'     => $this->projectModel->getById($projectId),
             'missing_dependency' => ! $this->hasTimeReport(),
+            'currency'    => $this->globalDefaults()['currency'] ?? array('code' => 'USD', 'symbol' => '$'),
         ]));
     }
 
