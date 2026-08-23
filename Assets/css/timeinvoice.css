@@ -1,0 +1,5 @@
+.timeinvoice-status-draft { color: #b58900; }
+.timeinvoice-status-sent  { color: #268bd2; }
+.timeinvoice-status-paid  { color: #859900; }
+.timeinvoice-total-row td { font-weight: bold; }
+.timeinvoice-outstanding { font-weight: bold; }

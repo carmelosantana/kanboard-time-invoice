@@ -8,7 +8,30 @@ class Plugin extends Base
 {
     public function initialize(): void
     {
-        // Model services and route/hook wiring are added by later tasks.
+        $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
+        $this->container['invoicePdf']   = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoicePdf($c);
+
+        $this->helper->register('invoice', \Kanboard\Plugin\TimeInvoice\Helper\InvoiceHelper::class);
+
+        // Routes (clean-URL ids).
+        $this->route->addRoute('timeinvoice', 'InvoiceController', 'list', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/project', 'InvoiceController', 'project', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/form', 'InvoiceController', 'form', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/save', 'InvoiceController', 'saveDraft', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/send', 'InvoiceController', 'send', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/paid', 'InvoiceController', 'markPaid', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/delete', 'InvoiceController', 'delete', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/pdf', 'InvoiceController', 'pdf', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/settings', 'SettingsController', 'show', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/settings/save', 'SettingsController', 'save', 'TimeInvoice');
+
+        // Entry points.
+        $this->template->hook->attach('template:project:sidebar', 'TimeInvoice:invoice/sidebar');
+        $this->template->hook->attach('template:header:dropdown', 'TimeInvoice:invoice/header_dropdown');
+
+        // Assets (CSP-safe external files).
+        $this->hook->on('template:layout:css', ['template' => 'plugins/TimeInvoice/Assets/css/timeinvoice.css']);
+        $this->hook->on('template:layout:js', ['template' => 'plugins/TimeInvoice/Assets/js/timeinvoice.js']);
     }
 
     /** Defensive dependency gate: TimeReport registers timeReportModel on the container. */
