@@ -1,0 +1,13 @@
+{
+    "name": "TimeInvoice",
+    "description": "Generate polished PDF invoices from your TimeReport hours: pick a project and date range, roll up line items by task/day/week, set rate and tax, and track invoices through draft → sent → paid with stable per-year numbering.",
+    "version": "0.1.0",
+    "author": "Carmelo Santana",
+    "license": "MIT",
+    "homepage": "https://github.com/carmelosantana/kanboard-time-invoice",
+    "kanboard_version": ">=1.2.47",
+    "php_version": ">=8.4",
+    "requires": [
+        { "plugin": "TimeReport", "min_version": "1.1.0", "reason": "supplies the deduped hours aggregate (report()) that invoice line items are built from" }
+    ]
+}
