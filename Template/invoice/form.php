@@ -17,7 +17,7 @@
     <?= $this->form->number('rate', $values, array(), array('step' => '0.01')) ?>
 
     <?= $this->form->checkbox('tax_enabled', t('Apply tax'), '1', ! empty($values['tax_enabled'])) ?>
-    <?= $this->form->label(t('Tax rate %'), 'tax_rate') ?>
+    <?= $this->form->label(t('Tax rate %%'), 'tax_rate') ?>
     <?= $this->form->number('tax_rate', $values, array(), array('step' => '0.001')) ?>
 
     <?= $this->form->label(t('Client name'), 'client_name') ?>

@@ -19,7 +19,7 @@
     <?= $this->form->number('rate', $values, array(), array('step' => '0.01')) ?>
 
     <?= $this->form->checkbox('tax_enabled', t('Apply tax by default'), '1', ! empty($values['tax_enabled'])) ?>
-    <?= $this->form->label(t('Default tax rate %'), 'tax_rate') ?>
+    <?= $this->form->label(t('Default tax rate %%'), 'tax_rate') ?>
     <?= $this->form->number('tax_rate', $values, array(), array('step' => '0.001')) ?>
 
     <?= $this->form->label(t('Payment terms (days)'), 'terms_days') ?>
