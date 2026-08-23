@@ -222,6 +222,47 @@ class InvoiceController extends BaseController
         $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
     }
 
+    /** Draft -> live preview snapshot (status draft); sent/paid -> stored frozen snapshot. */
+    protected function snapshotForPdf(int $projectId, string $id, int $userId): array
+    {
+        $rec = $this->invoiceModel->load($projectId, $id);
+        if ($rec === null) {
+            return [];
+        }
+        if (($rec['status'] ?? '') === 'draft') {
+            $rec['issue_date'] = date('Y-m-d');
+            $snap = $this->freezeSnapshot($rec, $userId);
+            $snap['status'] = 'draft';
+            $snap['number'] = null;
+            return $snap;
+        }
+        return $rec;
+    }
+
+    public function pdf(): void
+    {
+        $userId = $this->userSession->getId();
+        $projectId = $this->request->getIntegerParam('project_id');
+        $id = $this->request->getStringParam('id');
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', ['plugin' => 'TimeInvoice']));
+            return;
+        }
+        $snap = $this->snapshotForPdf($projectId, $id, $userId);
+        if ($snap === []) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
+            return;
+        }
+        $bytes = $this->invoicePdf->render($snap);
+        $name = ($snap['number'] ?? 'draft') . '.pdf';
+
+        $this->response->withoutCache();
+        $this->response->withContentType('application/pdf');
+        $this->response->withHeader('Content-Disposition', 'attachment; filename="' . $name . '"');
+        $this->response->withBody($bytes);
+        $this->response->send();
+    }
+
     public function delete(): void
     {
         $userId = $this->userSession->getId();

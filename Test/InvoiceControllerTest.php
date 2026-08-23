@@ -48,4 +48,25 @@ class InvoiceControllerTest extends Base
         $this->assertSame('2026-09-22', $snap['due_date']); // issue + 30 days
         $this->assertSame('#1 Task', $snap['line_items'][0]['label']);
     }
+
+    public function testPdfPreviewForDraftRendersBytes(): void
+    {
+        $this->container['timeReportModel'] = fn ($x) => new class {
+            public function report($pid, $s, $e, $g, $d, $u) {
+                return ['breakdown' => [['key' => '1', 'label' => '#1', 'hours' => 2.0, 'task_count' => 1]]];
+            }
+        };
+        $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
+        $model = new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($this->container);
+        $id = $model->createDraft($pid, 1, ['range' => ['start' => '2026-08-01', 'end' => '2026-08-31'], 'granularity' => 'task', 'rate' => 100.0, 'currency' => ['code' => 'USD', 'symbol' => '$']]);
+
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'snapshotForPdf');
+        $m->setAccessible(true);
+        $snap = $m->invoke($c, $pid, $id, 1);
+        $bytes = (new \Kanboard\Plugin\TimeInvoice\Model\InvoicePdf($this->container))->render($snap);
+        $this->assertStringStartsWith('%PDF-', $bytes);
+        $this->assertSame('draft', $snap['status']);
+    }
 }
