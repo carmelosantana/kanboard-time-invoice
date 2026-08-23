@@ -196,6 +196,7 @@ class InvoiceController extends BaseController
 
     public function send(): void
     {
+        $this->checkCSRFParam();
         $userId = $this->userSession->getId();
         $projectId = $this->request->getIntegerParam('project_id');
         $id = $this->request->getStringParam('id');
@@ -214,6 +215,7 @@ class InvoiceController extends BaseController
 
     public function markPaid(): void
     {
+        $this->checkCSRFParam();
         $userId = $this->userSession->getId();
         $projectId = $this->request->getIntegerParam('project_id');
         if (in_array($projectId, $this->accessibleProjectIds($userId), true)) {
@@ -265,6 +267,7 @@ class InvoiceController extends BaseController
 
     public function delete(): void
     {
+        $this->checkCSRFParam();
         $userId = $this->userSession->getId();
         $projectId = $this->request->getIntegerParam('project_id');
         if (in_array($projectId, $this->accessibleProjectIds($userId), true)) {
