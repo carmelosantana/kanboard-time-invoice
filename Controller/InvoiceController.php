@@ -151,4 +151,84 @@ class InvoiceController extends BaseController
     {
         return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : $fallback;
     }
+
+    /**
+     * Assemble the immutable snapshot frozen onto a sent invoice. Currency and
+     * terms_days come from the layered defaults (global < project), NOT the
+     * draft's hardcoded values, since the form does not expose those fields —
+     * this makes a user's GLOBAL settings (e.g. GBP / Net-15) actually apply.
+     */
+    protected function freezeSnapshot(array $draft, int $userId): array
+    {
+        $projectId = (int) $draft['project_id'];
+        $issueDate = $draft['issue_date'] ?? date('Y-m-d');
+        $rate      = (float) ($draft['rate'] ?? 0);
+
+        $global  = $this->globalDefaults();
+        $project = $this->projectDefaults($projectId);
+        $currency  = $project['currency'] ?? ($global['currency'] ?? ['code' => 'USD', 'symbol' => '$']);
+        $termsDays = (int) ($project['terms_days'] ?? ($global['terms_days'] ?? 30));
+
+        $report = $this->timeReportModel->report(
+            $projectId,
+            $draft['range']['start'], $draft['range']['end'],
+            $draft['granularity'] ?? 'task', true, $userId
+        );
+        $items  = \Kanboard\Plugin\TimeInvoice\Model\InvoiceBuilder::lineItems($report['breakdown'] ?? [], $rate);
+        $totals = \Kanboard\Plugin\TimeInvoice\Model\InvoiceBuilder::totals($items, ! empty($draft['tax_enabled']), (float) ($draft['tax_rate'] ?? 0));
+
+        return [
+            'issue_date' => $issueDate,
+            'due_date'   => date('Y-m-d', strtotime($issueDate . ' +' . $termsDays . ' days')),
+            'range'      => $draft['range'],
+            'granularity'=> $draft['granularity'] ?? 'task',
+            'currency'   => $currency,
+            'business'   => $global['business'] ?? [],
+            'client'     => $draft['client'] ?? [],
+            'rate'       => $rate,
+            'line_items' => $items,
+            'subtotal'   => $totals['subtotal'],
+            'tax'        => ['enabled' => ! empty($draft['tax_enabled']), 'rate' => (float) ($draft['tax_rate'] ?? 0), 'amount' => $totals['tax']],
+            'total'      => $totals['total'],
+            'notes'      => (string) (! empty($draft['notes']) ? $draft['notes'] : ($global['terms'] ?? '')),
+        ];
+    }
+
+    public function send(): void
+    {
+        $userId = $this->userSession->getId();
+        $projectId = $this->request->getIntegerParam('project_id');
+        $id = $this->request->getStringParam('id');
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', ['plugin' => 'TimeInvoice']));
+            return;
+        }
+        $draft = $this->invoiceModel->load($projectId, $id);
+        if ($draft !== null && ($draft['status'] ?? '') === 'draft') {
+            $draft['issue_date'] = date('Y-m-d');
+            $snapshot = $this->freezeSnapshot($draft, $userId);
+            $this->invoiceModel->send($projectId, $id, $snapshot);
+        }
+        $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
+    }
+
+    public function markPaid(): void
+    {
+        $userId = $this->userSession->getId();
+        $projectId = $this->request->getIntegerParam('project_id');
+        if (in_array($projectId, $this->accessibleProjectIds($userId), true)) {
+            $this->invoiceModel->markPaid($projectId, $this->request->getStringParam('id'));
+        }
+        $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
+    }
+
+    public function delete(): void
+    {
+        $userId = $this->userSession->getId();
+        $projectId = $this->request->getIntegerParam('project_id');
+        if (in_array($projectId, $this->accessibleProjectIds($userId), true)) {
+            $this->invoiceModel->delete($projectId, $this->request->getStringParam('id'));
+        }
+        $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
+    }
 }
