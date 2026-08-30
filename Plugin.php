@@ -10,6 +10,7 @@ class Plugin extends Base
     {
         $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
         $this->container['invoicePdf']   = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoicePdf($c);
+        $this->container['coverNoteGenerator'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\CoverNoteGenerator($c);
 
         $this->helper->register('invoice', \Kanboard\Plugin\TimeInvoice\Helper\InvoiceHelper::class);
 
