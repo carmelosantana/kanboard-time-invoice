@@ -338,7 +338,7 @@ class InvoiceController extends BaseController
         $this->checkCSRFForm();
         $userId = $this->userSession->getId();
         $values = $this->request->getValues();
-        $projectId = (int) ($values['project_id'] ?? 0);
+        $projectId = $this->requestProjectId();
 
         if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
             $this->response->json(['error' => t('Not available for this project.')], 400);

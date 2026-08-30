@@ -42,6 +42,7 @@ class TemplateAssetsTest extends Base
         $this->assertStringContainsString('ai_ready', $src, 'AI block must be gated on ai_ready');
         $this->assertStringContainsString('timeinvoice-generate-note', $src, 'generate button present');
         $this->assertStringContainsString('timeinvoice-profile', $src, 'profile select present');
+        $this->assertStringContainsString('id="form-profile_id"', $src, 'profile select id matches its label for=');
         $this->assertStringContainsString("'generateCoverNote'", $src, 'button targets the generate action');
     }
 
