@@ -3,3 +3,5 @@
 .timeinvoice-status-paid  { color: #859900; }
 .timeinvoice-total-row td { font-weight: bold; }
 .timeinvoice-outstanding { font-weight: bold; }
+.timeinvoice-ai { margin: 10px 0; }
+.timeinvoice-loading { opacity: 0.6; cursor: progress; }

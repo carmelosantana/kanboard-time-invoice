@@ -30,6 +30,21 @@
     <?= $this->form->label(t('Notes / terms'), 'notes') ?>
     <?= $this->form->textarea('notes', $values) ?>
 
+    <?php if (! empty($ai_ready)): ?>
+        <div class="timeinvoice-ai">
+            <?= $this->form->label(t('AI provider'), 'profile_id') ?>
+            <select class="timeinvoice-profile" name="profile_id">
+                <?php foreach ($ai_profiles as $p): ?>
+                    <option value="<?= $this->text->e($p['id']) ?>"<?= $p['id'] === $ai_default_profile ? ' selected' : '' ?>><?= $this->text->e($p['label']) ?></option>
+                <?php endforeach ?>
+            </select>
+            <button type="button" class="btn timeinvoice-generate-note"
+                    data-url="<?= $this->url->href('InvoiceController', 'generateCoverNote', array('plugin' => 'TimeInvoice')) ?>">
+                <?= t('Generate cover note') ?>
+            </button>
+        </div>
+    <?php endif ?>
+
     <div class="form-actions">
         <button type="submit" class="btn btn-blue"><?= t('Save draft') ?></button>
     </div>

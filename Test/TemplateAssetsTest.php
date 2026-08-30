@@ -35,4 +35,20 @@ class TemplateAssetsTest extends Base
             }
         }
     }
+
+    public function testFormHasAiBlockGatedOnAiReady(): void
+    {
+        $src = file_get_contents($this->root() . '/Template/invoice/form.php');
+        $this->assertStringContainsString('ai_ready', $src, 'AI block must be gated on ai_ready');
+        $this->assertStringContainsString('timeinvoice-generate-note', $src, 'generate button present');
+        $this->assertStringContainsString('timeinvoice-profile', $src, 'profile select present');
+        $this->assertStringContainsString("'generateCoverNote'", $src, 'button targets the generate action');
+    }
+
+    public function testJsHasGenerateHandler(): void
+    {
+        $src = file_get_contents($this->root() . '/Assets/js/timeinvoice.js');
+        $this->assertStringContainsString('timeinvoice-generate-note', $src);
+        $this->assertStringContainsString("name='notes'", $src, 'handler writes into the notes textarea');
+    }
 }
