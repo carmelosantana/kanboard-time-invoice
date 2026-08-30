@@ -18,6 +18,7 @@ class SettingsController extends BaseController
             'terms'         => $cfg->get('timeinvoice_terms', ''),
             'terms_days'    => (int) $cfg->get('timeinvoice_terms_days', '30'),
             'number_format' => $cfg->get('timeinvoice_number_format', 'INV-{YYYY}-{seq}') ?: 'INV-{YYYY}-{seq}',
+            'ai_style'      => $cfg->get('timeinvoice_ai_style', ''),
         ];
     }
 
@@ -50,6 +51,7 @@ class SettingsController extends BaseController
             'timeinvoice_terms'         => (string) ($v['terms'] ?? ''),
             'timeinvoice_terms_days'    => (string) (int) ($v['terms_days'] ?? 30),
             'timeinvoice_number_format' => (string) ($v['number_format'] ?? 'INV-{YYYY}-{seq}'),
+            'timeinvoice_ai_style'      => (string) ($v['ai_style'] ?? ''),
         ]);
         $this->response->redirect($this->helper->url->to('SettingsController', 'show', ['plugin' => 'TimeInvoice']));
     }

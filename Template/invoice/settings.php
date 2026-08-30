@@ -31,6 +31,10 @@
     <?= $this->form->text('number_format', $values) ?>
     <p class="form-help"><?= t('Tokens: {YYYY} = year, {seq} = per-year sequence (zero-padded).') ?></p>
 
+    <?= $this->form->label(t('AI cover-note style instructions'), 'ai_style') ?>
+    <?= $this->form->textarea('ai_style', $values) ?>
+    <p class="form-help"><?= t('Guides the AI cover note tone (e.g. formal, concise, first-person plural). Leave blank for a sensible default.') ?></p>
+
     <div class="form-actions">
         <button type="submit" class="btn btn-blue"><?= t('Save settings') ?></button>
     </div>

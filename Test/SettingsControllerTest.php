@@ -88,6 +88,36 @@ class SettingsControllerTest extends Base
         $this->assertSame('', $this->container['configModel']->get('timeinvoice_rate', ''), 'non-admin write must be rejected');
     }
 
+    public function testCurrentSettingsReadsAiStyle(): void
+    {
+        $this->container['configModel']->save(['timeinvoice_ai_style' => 'Terse and formal.']);
+        $c = new SettingsController($this->container);
+        $m = new ReflectionMethod($c, 'currentSettings');
+        $m->setAccessible(true);
+        $this->assertSame('Terse and formal.', $m->invoke($c)['ai_style']);
+    }
+
+    public function testCurrentSettingsAiStyleDefaultsEmpty(): void
+    {
+        $c = new SettingsController($this->container);
+        $m = new ReflectionMethod($c, 'currentSettings');
+        $m->setAccessible(true);
+        $this->assertSame('', $m->invoke($c)['ai_style']);
+    }
+
+    public function testSaveWritesAiStyleAsAdmin(): void
+    {
+        $_SESSION['user'] = ['id' => 1, 'role' => \Kanboard\Core\Security\Role::APP_ADMIN];
+        $this->silenceRedirects();
+        $c = new SettingsController($this->container);
+        $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
+            'csrf_token' => $this->container['token']->getCSRFToken(),
+            'ai_style'   => 'First-person plural, outcome-focused.',
+        ]);
+        $c->save();
+        $this->assertSame('First-person plural, outcome-focused.', $this->container['configModel']->get('timeinvoice_ai_style', ''));
+    }
+
     /** Seat an app-admin user in the session (harness starts with an empty session). */
     private function loginAsAdmin(): void
     {
