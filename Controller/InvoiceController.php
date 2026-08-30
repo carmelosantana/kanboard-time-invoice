@@ -322,12 +322,23 @@ class InvoiceController extends BaseController
         ];
     }
 
+    /**
+     * Resolve project_id from the POST body ($_POST), not the query string.
+     * The invoice form AJAXes it as a hidden field via $form.serialize(), so
+     * getIntegerParam() ($_GET) would see 0 — read it from getValues() instead.
+     */
+    protected function requestProjectId(): int
+    {
+        return (int) ($this->request->getValues()['project_id'] ?? 0);
+    }
+
     /** POST — generate an AI cover note as JSON for the draft form. */
     public function generateCoverNote(): void
     {
         $this->checkCSRFForm();
         $userId = $this->userSession->getId();
-        $projectId = (int) $this->request->getIntegerParam('project_id');
+        $values = $this->request->getValues();
+        $projectId = (int) ($values['project_id'] ?? 0);
 
         if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
             $this->response->json(['error' => t('Not available for this project.')], 400);
@@ -338,7 +349,7 @@ class InvoiceController extends BaseController
             return;
         }
 
-        $ctx  = $this->coverNoteContext($this->request->getValues(), $projectId, $userId);
+        $ctx  = $this->coverNoteContext($values, $projectId, $userId);
         $note = $this->coverNoteGenerator->generate($ctx, $this->aiRegistry(), $this->aiCatalog());
 
         if ($note === null) {

@@ -122,4 +122,26 @@ class InvoiceControllerTest extends Base
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', $ctx['start']);
         $this->assertSame('p2', $ctx['profile_id']);
     }
+
+    /**
+     * Regression (live E2E): the invoice form AJAXes project_id in the POST body
+     * (via $form.serialize(), no query string). generateCoverNote() must resolve
+     * it from getValues() ($_POST), NOT getIntegerParam() ($_GET) — otherwise the
+     * access guard sees 0 and every generate returns 400. This pins the seam that
+     * reads project_id from the body with the query string empty.
+     */
+    public function testRequestProjectIdReadsFromPostBody(): void
+    {
+        $csrf = $this->container['token']->getCSRFToken();
+        // GET (3rd arg) is empty; project_id lives ONLY in the POST body (4th arg).
+        $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
+            'csrf_token' => $csrf,
+            'project_id' => '42',
+        ]);
+
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'requestProjectId');
+        $m->setAccessible(true);
+        $this->assertSame(42, $m->invoke($c), 'project_id must be read from the POST body even when the query string is empty');
+    }
 }
