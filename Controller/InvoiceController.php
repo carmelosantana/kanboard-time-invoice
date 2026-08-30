@@ -327,9 +327,9 @@ class InvoiceController extends BaseController
      * The invoice form AJAXes it as a hidden field via $form.serialize(), so
      * getIntegerParam() ($_GET) would see 0 — read it from getValues() instead.
      */
-    protected function requestProjectId(): int
+    protected function requestProjectId(array $values): int
     {
-        return (int) ($this->request->getValues()['project_id'] ?? 0);
+        return (int) ($values['project_id'] ?? 0);
     }
 
     /** POST — generate an AI cover note as JSON for the draft form. */
@@ -338,7 +338,7 @@ class InvoiceController extends BaseController
         $this->checkCSRFForm();
         $userId = $this->userSession->getId();
         $values = $this->request->getValues();
-        $projectId = $this->requestProjectId();
+        $projectId = $this->requestProjectId($values);
 
         if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
             $this->response->json(['error' => t('Not available for this project.')], 400);

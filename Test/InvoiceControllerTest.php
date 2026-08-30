@@ -139,9 +139,14 @@ class InvoiceControllerTest extends Base
             'project_id' => '42',
         ]);
 
+        // getValues() is single-use/stateful: read it ONCE, feed the seam.
+        $values = $this->container['request']->getValues();
+
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'requestProjectId');
         $m->setAccessible(true);
-        $this->assertSame(42, $m->invoke($c), 'project_id must be read from the POST body even when the query string is empty');
+        $this->assertSame(42, $m->invoke($c, $values), 'project_id must be read from the POST body even when the query string is empty');
+        $this->assertSame(0, $m->invoke($c, []), 'missing project_id → 0');
+        $this->assertSame(0, $m->invoke($c, ['project_id' => 'abc']), 'non-numeric project_id → 0');
     }
 }
