@@ -9,7 +9,7 @@ class PluginTest extends Base
     {
         $p = new Plugin($this->container);
         $this->assertSame('TimeInvoice', $p->getPluginName());
-        $this->assertSame('1.0.0', $p->getPluginVersion());
+        $this->assertSame('1.1.0', $p->getPluginVersion());
         $this->assertSame('Carmelo Santana', $p->getPluginAuthor());
         $this->assertSame('MIT', $p->getPluginLicense());
         $this->assertSame('>=1.2.47', $p->getCompatibleVersion());

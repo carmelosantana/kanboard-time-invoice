@@ -9,9 +9,9 @@ class PluginMetaTest extends Base
         return json_decode(file_get_contents(dirname(__DIR__) . '/plugin.json'), true);
     }
 
-    public function testVersionIs100(): void
+    public function testVersionIs110(): void
     {
-        $this->assertSame('1.0.0', $this->json()['version']);
+        $this->assertSame('1.1.0', $this->json()['version']);
     }
 
     public function testNameAndCompat(): void
@@ -27,10 +27,26 @@ class PluginMetaTest extends Base
     public function testRequiresArrayShape(): void
     {
         $j = $this->json();
-        $this->assertArrayNotHasKey('recommends', $j, 'v1 declares no recommends');
         $this->assertSame(['TimeReport'], array_column($j['requires'], 'plugin'));
-        $this->assertSame('1.1.0', $j['requires'][0]['min_version']);
+        $this->assertSame('1.4.0', $j['requires'][0]['min_version']);
         $this->assertStringStartsNotWith('>=', $j['requires'][0]['min_version']);
         $this->assertNotEmpty($j['requires'][0]['reason']);
+    }
+
+    /** recommends: AiConnector, bare min_version, same array-of-objects shape. */
+    public function testRecommendsAiConnectorShape(): void
+    {
+        $j = $this->json();
+        $this->assertArrayHasKey('recommends', $j, 'v1.1.0 recommends AiConnector');
+        $this->assertSame(['AiConnector'], array_column($j['recommends'], 'plugin'));
+        $this->assertSame('1.1.0', $j['recommends'][0]['min_version']);
+        $this->assertStringStartsNotWith('>=', $j['recommends'][0]['min_version']);
+        $this->assertNotEmpty($j['recommends'][0]['reason']);
+    }
+
+    public function testPluginPhpVersionMatchesJson(): void
+    {
+        $plugin = new \Kanboard\Plugin\TimeInvoice\Plugin($this->container);
+        $this->assertSame($this->json()['version'], $plugin->getPluginVersion());
     }
 }
