@@ -88,4 +88,38 @@ class InvoiceControllerTest extends Base
         $this->assertStringStartsWith('%PDF-', $bytes);
         $this->assertSame('draft', $snap['status']);
     }
+
+    public function testCoverNoteContextMapsRequestValues(): void
+    {
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Acme']);
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'coverNoteContext');
+        $m->setAccessible(true);
+        $v = [
+            'start_date' => '2026-08-01', 'end_date' => '2026-08-31', 'granularity' => 'week',
+            'rate' => '150', 'tax_enabled' => '1', 'tax_rate' => '10',
+            'client_name' => 'Acme Inc', 'profile_id' => '',
+        ];
+        $ctx = $m->invoke($c, $v, $pid, 1);
+        $this->assertSame($pid, $ctx['project_id']);
+        $this->assertSame(1, $ctx['user_id']);
+        $this->assertSame('week', $ctx['granularity']);
+        $this->assertSame(150.0, $ctx['rate']);
+        $this->assertTrue($ctx['tax_enabled']);
+        $this->assertSame('Acme Inc', $ctx['client']['name']);
+        $this->assertSame('Acme', $ctx['project_name']);
+        $this->assertNull($ctx['profile_id'], 'empty profile_id maps to null (use default)');
+    }
+
+    public function testCoverNoteContextClampsBadGranularityAndDates(): void
+    {
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'coverNoteContext');
+        $m->setAccessible(true);
+        $ctx = $m->invoke($c, ['granularity' => 'bogus', 'start_date' => 'nope', 'profile_id' => 'p2'], $pid, 1);
+        $this->assertSame('task', $ctx['granularity'], 'invalid granularity falls back to task');
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', $ctx['start']);
+        $this->assertSame('p2', $ctx['profile_id']);
+    }
 }

@@ -302,6 +302,52 @@ class InvoiceController extends BaseController
         $this->response->send();
     }
 
+    /** Map request values → the CoverNoteGenerator context. Pure enough to unit-test. */
+    protected function coverNoteContext(array $v, int $projectId, int $userId): array
+    {
+        return [
+            'project_id'   => $projectId,
+            'user_id'      => $userId,
+            'start'        => $this->validDate($v['start_date'] ?? '', date('Y-m-01')),
+            'end'          => $this->validDate($v['end_date'] ?? '', date('Y-m-d')),
+            'granularity'  => in_array($v['granularity'] ?? '', ['day', 'week', 'task', 'total'], true) ? $v['granularity'] : 'task',
+            'rate'         => (float) ($v['rate'] ?? 0),
+            'tax_enabled'  => ! empty($v['tax_enabled']),
+            'tax_rate'     => (float) ($v['tax_rate'] ?? 0),
+            'project_name' => (string) ($this->projectModel->getById($projectId)['name'] ?? ''),
+            'client'       => ['name' => (string) ($v['client_name'] ?? '')],
+            'currency'     => $this->globalDefaults()['currency'] ?? ['code' => 'USD', 'symbol' => '$'],
+            'style'        => (string) $this->configModel->get('timeinvoice_ai_style', ''),
+            'profile_id'   => ($v['profile_id'] ?? '') !== '' ? (string) $v['profile_id'] : null,
+        ];
+    }
+
+    /** POST — generate an AI cover note as JSON for the draft form. */
+    public function generateCoverNote(): void
+    {
+        $this->checkCSRFForm();
+        $userId = $this->userSession->getId();
+        $projectId = (int) $this->request->getIntegerParam('project_id');
+
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+            $this->response->json(['error' => t('Not available for this project.')], 400);
+            return;
+        }
+        if (! $this->aiReady()) {
+            $this->response->json(['error' => t('AI cover notes need the AiConnector plugin (1.1.0+) with a configured provider.')], 400);
+            return;
+        }
+
+        $ctx  = $this->coverNoteContext($this->request->getValues(), $projectId, $userId);
+        $note = $this->coverNoteGenerator->generate($ctx, $this->aiRegistry(), $this->aiCatalog());
+
+        if ($note === null) {
+            $this->response->json(['error' => t('The model returned no cover note. Try again or pick a different provider.')], 502);
+            return;
+        }
+        $this->response->json(['note' => $note]);
+    }
+
     public function delete(): void
     {
         $this->checkCSRFParam();
