@@ -49,6 +49,25 @@ class InvoiceControllerTest extends Base
         $this->assertSame('#1 Task', $snap['line_items'][0]['label']);
     }
 
+    public function testAiReadyFalseWithoutAiConnector(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'aiReady');
+        $m->setAccessible(true);
+        $this->assertFalse($m->invoke($c), 'no AiConnector classes loaded → not ready');
+    }
+
+    public function testAiProfilesEmptyWithoutAiConnector(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'aiProfiles');
+        $m->setAccessible(true);
+        $this->assertSame([], $m->invoke($c));
+        $d = new ReflectionMethod($c, 'aiDefaultProfile');
+        $d->setAccessible(true);
+        $this->assertSame('', $d->invoke($c));
+    }
+
     public function testPdfPreviewForDraftRendersBytes(): void
     {
         $this->container['timeReportModel'] = fn ($x) => new class {

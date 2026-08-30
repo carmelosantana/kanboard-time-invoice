@@ -17,6 +17,37 @@ class InvoiceController extends BaseController
         return array_map('intval', $this->projectPermissionModel->getActiveProjectIds($userId));
     }
 
+    protected function aiRegistry(): ?object
+    {
+        $cls = '\\Kanboard\\Plugin\\AiConnector\\Model\\ProviderRegistry';
+        return class_exists($cls) ? new $cls($this->container) : null;
+    }
+
+    protected function aiCatalog(): ?object
+    {
+        $cls = '\\Kanboard\\Plugin\\AiConnector\\Model\\ModelCatalog';
+        return class_exists($cls) ? new $cls($this->container) : null;
+    }
+
+    /** Both AiConnector classes must exist (1.1.0+) AND a provider must be usable. */
+    protected function aiReady(): bool
+    {
+        $reg = $this->aiRegistry();
+        return $reg !== null && $this->aiCatalog() !== null && $reg->isReady();
+    }
+
+    protected function aiProfiles(): array
+    {
+        $reg = $this->aiRegistry();
+        return $reg !== null ? $reg->listProfiles() : [];
+    }
+
+    protected function aiDefaultProfile(): string
+    {
+        $reg = $this->aiRegistry();
+        return $reg !== null ? (string) $reg->getDefaultProfileId() : '';
+    }
+
     /** Cross-project invoice list + outstanding total. */
     public function list(): void
     {
@@ -105,9 +136,12 @@ class InvoiceController extends BaseController
         ], $defaults);
 
         $this->response->html($this->helper->layout->app('TimeInvoice:invoice/form', [
-            'title'   => t('New invoice'),
-            'project' => $this->projectModel->getById($projectId),
-            'values'  => $values,
+            'title'              => t('New invoice'),
+            'project'            => $this->projectModel->getById($projectId),
+            'values'             => $values,
+            'ai_ready'           => $this->aiReady(),
+            'ai_profiles'        => $this->aiProfiles(),
+            'ai_default_profile' => $this->aiDefaultProfile(),
         ]));
     }
 
