@@ -84,4 +84,13 @@ class TemplateAssetsTest extends Base
             $this->assertStringContainsString($action, $src, "show page must offer $action");
         }
     }
+
+    public function testListRowCollapsesToShowPage(): void
+    {
+        $src = file_get_contents($this->root() . '/Template/invoice/list.php');
+        $this->assertStringContainsString("'show'", $src, 'the number must link to the show page');
+        foreach (["'markPaid'", "'delete'", "'send'"] as $action) {
+            $this->assertStringNotContainsString($action, $src, "$action must live on the show page, not in a list row");
+        }
+    }
 }
