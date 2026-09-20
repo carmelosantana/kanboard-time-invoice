@@ -224,4 +224,42 @@ class InvoiceControllerTest extends Base
         );
         $this->assertSame('Beta LLC', $merged2['client']['name'], 'draft client must override the project client');
     }
+
+    public function testShowRouteRegistered(): void
+    {
+        $src = file_get_contents(dirname(__DIR__) . '/Plugin.php');
+        $this->assertStringContainsString("'timeinvoice/show'", $src);
+    }
+
+    public function testSnapshotForPdfDrivesShowForDraftAndFrozenForSent(): void
+    {
+        $this->container['timeReportModel'] = fn ($x) => new class {
+            public function report($pid, $s, $e, $g, $d, $u) {
+                return ['breakdown' => [['key' => '1', 'label' => '#1 Task', 'hours' => 4.0, 'task_count' => 1]]];
+            }
+        };
+        // Plugin::initialize() does not run under the harness, so the container
+        // has no invoiceModel — snapshotForPdf() needs it. Register it explicitly.
+        $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
+        $model = new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($this->container);
+        $id = $model->createDraft($pid, 1, [
+            'range' => ['start' => '2026-08-01', 'end' => '2026-08-31'],
+            'granularity' => 'task', 'rate' => 100.0,
+        ]);
+
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'snapshotForPdf');
+        $m->setAccessible(true);
+
+        $draftSnap = $m->invoke($c, $pid, $id, 1);
+        $this->assertSame('draft', $draftSnap['status']);
+        $this->assertNull($draftSnap['number'], 'a draft has no number until issued');
+        $this->assertSame(400.0, $draftSnap['total']);
+
+        $model->send($pid, $id, $m->invoke($c, $pid, $id, 1));
+        $sentSnap = $m->invoke($c, $pid, $id, 1);
+        $this->assertSame('sent', $sentSnap['status']);
+        $this->assertNotNull($sentSnap['number'], 'an issued invoice carries its frozen number');
+    }
 }

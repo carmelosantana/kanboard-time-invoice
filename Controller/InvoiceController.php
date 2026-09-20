@@ -112,6 +112,34 @@ class InvoiceController extends BaseController
         ]));
     }
 
+    /** Invoice detail page — the home for every per-invoice action. */
+    public function show(): void
+    {
+        $userId = $this->userSession->getId();
+        $projectId = $this->request->getIntegerParam('project_id');
+        $id = $this->request->getStringParam('id');
+
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', ['plugin' => 'TimeInvoice']));
+            return;
+        }
+
+        $snap = $this->snapshotForPdf($projectId, $id, $userId);
+        if ($snap === []) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
+            return;
+        }
+
+        $record = $this->invoiceModel->load($projectId, $id);
+        $this->response->html($this->helper->layout->app('TimeInvoice:invoice/show', [
+            'title'      => t('Invoice'),
+            'project'    => $this->projectModel->getById($projectId),
+            'invoice'    => $snap,
+            'status'     => (string) ($record['status'] ?? 'draft'),
+            'invoice_id' => $id,
+        ]));
+    }
+
     protected function globalDefaults(): array
     {
         $cfg = $this->configModel;

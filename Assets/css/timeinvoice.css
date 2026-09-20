@@ -6,3 +6,6 @@
 .timeinvoice-ai { margin: 10px 0; }
 .timeinvoice-loading { opacity: 0.6; cursor: progress; }
 .timeinvoice-new { margin: 0 0 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.timeinvoice-actions { margin: 12px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.timeinvoice-parties { display: flex; gap: 32px; flex-wrap: wrap; }
+.timeinvoice-parties > div { min-width: 220px; }

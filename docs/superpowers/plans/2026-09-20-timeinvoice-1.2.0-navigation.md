@@ -878,6 +878,9 @@ public function testSnapshotForPdfDrivesShowForDraftAndFrozenForSent(): void
             return ['breakdown' => [['key' => '1', 'label' => '#1 Task', 'hours' => 4.0, 'task_count' => 1]]];
         }
     };
+    // Plugin::initialize() does not run under the harness, so the container has
+    // no invoiceModel — snapshotForPdf() needs it. Register it explicitly.
+    $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
     $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
     $model = new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($this->container);
     $id = $model->createDraft($pid, 1, [

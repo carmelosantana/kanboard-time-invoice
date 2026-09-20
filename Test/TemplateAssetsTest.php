@@ -74,4 +74,14 @@ class TemplateAssetsTest extends Base
         $src = file_get_contents($this->root() . '/Template/invoice/form.php');
         $this->assertStringContainsString('Inherited from the project', $src, 'the client block must say where its values come from');
     }
+
+    public function testShowTemplateExistsAndCarriesActions(): void
+    {
+        $path = $this->root() . '/Template/invoice/show.php';
+        $this->assertFileExists($path);
+        $src = file_get_contents($path);
+        foreach (["'pdf'", "'form'", "'send'", "'markPaid'", "'delete'"] as $action) {
+            $this->assertStringContainsString($action, $src, "show page must offer $action");
+        }
+    }
 }
