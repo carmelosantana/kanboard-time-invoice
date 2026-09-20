@@ -30,6 +30,7 @@ class Plugin extends Base
         // Entry points.
         $this->template->hook->attach('template:project:sidebar', 'TimeInvoice:invoice/sidebar');
         $this->template->hook->attach('template:header:dropdown', 'TimeInvoice:invoice/header_dropdown');
+        $this->hook->on('template:config:sidebar', ['template' => 'TimeInvoice:config/sidebar']);
 
         // Assets (CSP-safe external files).
         $this->hook->on('template:layout:css', ['template' => 'plugins/TimeInvoice/Assets/css/timeinvoice.css']);

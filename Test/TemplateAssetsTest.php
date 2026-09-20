@@ -52,4 +52,20 @@ class TemplateAssetsTest extends Base
         $this->assertStringContainsString('timeinvoice-generate-note', $src);
         $this->assertStringContainsString("name='notes'", $src, 'handler writes into the notes textarea');
     }
+
+    public function testConfigSidebarPartialExistsAndLinks(): void
+    {
+        $path = $this->root() . '/Template/config/sidebar.php';
+        $this->assertFileExists($path);
+        $src = file_get_contents($path);
+        $this->assertStringContainsString("'SettingsController'", $src);
+        $this->assertStringContainsString("'TimeInvoice'", $src);
+    }
+
+    public function testPluginRegistersConfigSidebarHook(): void
+    {
+        $src = file_get_contents($this->root() . '/Plugin.php');
+        $this->assertStringContainsString('template:config:sidebar', $src, 'settings page must be linked from the admin sidebar');
+        $this->assertStringContainsString('TimeInvoice:config/sidebar', $src);
+    }
 }
