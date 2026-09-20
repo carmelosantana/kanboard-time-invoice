@@ -9,3 +9,5 @@
 .timeinvoice-actions { margin: 12px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .timeinvoice-parties { display: flex; gap: 32px; flex-wrap: wrap; }
 .timeinvoice-parties > div { min-width: 220px; }
+.timeinvoice-totals { margin: 12px 0; padding: 8px 12px; border-left: 3px solid #268bd2; background: rgba(38,139,210,0.06); }
+.timeinvoice-totals-idle { opacity: 0.7; }

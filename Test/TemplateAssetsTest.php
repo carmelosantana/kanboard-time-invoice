@@ -100,4 +100,15 @@ class TemplateAssetsTest extends Base
         $this->assertStringNotContainsString('Send this invoice?', $js, 'confirm copy must not promise an email');
         $this->assertStringContainsString('Issue this invoice?', $js);
     }
+
+    public function testFormAndJsCarryTheLiveTotalsRegion(): void
+    {
+        $tpl = file_get_contents($this->root() . '/Template/invoice/form.php');
+        $this->assertStringContainsString('timeinvoice-totals', $tpl, 'form needs a totals region to fill');
+        $this->assertStringContainsString("'previewTotals'", $tpl, 'form must carry the endpoint URL as data');
+
+        $js = file_get_contents($this->root() . '/Assets/js/timeinvoice.js');
+        $this->assertStringContainsString('timeinvoice-totals', $js);
+        $this->assertStringContainsString('recalc-fields', $js, 'handler reads the recalc field list from the region');
+    }
 }

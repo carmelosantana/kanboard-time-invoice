@@ -39,4 +39,49 @@
             $btn.prop("disabled", false).removeClass("timeinvoice-loading");
         });
     });
+
+    // Live draft totals. Debounced; reuses the same $form.serialize() seam as
+    // the cover note, so project_id arrives in the POST body.
+    var totalsTimer = null;
+    function refreshTotals() {
+        var $box = jQuery(".timeinvoice-totals");
+        if (!$box.length) { return; }
+        var $form = $box.closest("form");
+        $box.addClass("timeinvoice-loading");
+        jQuery.ajax({
+            url: $box.data("url"),
+            method: "POST",
+            dataType: "json",
+            data: $form.serialize()
+        }).done(function (r) {
+            if (!r || r.error) {
+                $box.text(r && r.error ? r.error : "Could not calculate totals.");
+                return;
+            }
+            var html = "<strong>" + r.hours.toFixed(2) + "</strong> hours \u00b7 " +
+                r.line_count + " line item(s) \u00b7 Subtotal " + r.symbol + r.subtotal.toFixed(2);
+            if (r.tax) { html += " \u00b7 Tax " + r.symbol + r.tax.toFixed(2); }
+            html += " \u00b7 <strong>Total " + r.symbol + r.total.toFixed(2) + "</strong>";
+            $box.html(html);
+        }).fail(function () {
+            $box.text("Could not calculate totals.");
+        }).always(function () {
+            $box.removeClass("timeinvoice-loading");
+        });
+    }
+
+    // Delegated from document, scoped to the form that owns a totals region, so
+    // the handler is inert on every other page.
+    jQuery(document).on("change keyup", "form :input", function () {
+        var $box = jQuery(".timeinvoice-totals");
+        if (!$box.length) { return; }
+        var fields = String($box.data("recalc-fields") || "").split(",");
+        if (jQuery.inArray(this.name, fields) === -1) { return; }
+        window.clearTimeout(totalsTimer);
+        totalsTimer = window.setTimeout(refreshTotals, 400);
+    });
+
+    jQuery(function () {
+        if (jQuery(".timeinvoice-totals").length) { refreshTotals(); }
+    });
 }());

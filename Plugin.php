@@ -24,6 +24,7 @@ class Plugin extends Base
         $this->route->addRoute('timeinvoice/paid', 'InvoiceController', 'markPaid', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/delete', 'InvoiceController', 'delete', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/pdf', 'InvoiceController', 'pdf', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/preview-totals', 'InvoiceController', 'previewTotals', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/generate-note', 'InvoiceController', 'generateCoverNote', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/project/settings', 'ProjectSettingsController', 'show', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/project/settings/save', 'ProjectSettingsController', 'save', 'TimeInvoice');

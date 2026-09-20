@@ -320,4 +320,41 @@ class InvoiceControllerTest extends Base
         $this->assertArrayNotHasKey('currency', $draft, 'the form never posts currency; storing USD/$ on every draft was a lie');
         $this->assertSame(14, $draft['terms_days']);
     }
+
+    public function testTotalsPayloadSummarisesASnapshot(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'totalsPayload');
+        $m->setAccessible(true);
+
+        $snap = [
+            'line_items' => [
+                ['label' => 'A', 'hours' => 2.5, 'amount' => 250.0],
+                ['label' => 'B', 'hours' => 1.5, 'amount' => 150.0],
+            ],
+            'subtotal' => 400.0,
+            'tax'      => ['enabled' => true, 'rate' => 10.0, 'amount' => 40.0],
+            'total'    => 440.0,
+            'currency' => ['code' => 'GBP', 'symbol' => 'L'],
+        ];
+
+        $p = $m->invoke($c, $snap);
+        $this->assertSame(4.0, $p['hours']);
+        $this->assertSame(2, $p['line_count']);
+        $this->assertSame(400.0, $p['subtotal']);
+        $this->assertSame(40.0, $p['tax']);
+        $this->assertSame(440.0, $p['total']);
+        $this->assertSame('L', $p['symbol']);
+    }
+
+    public function testTotalsPayloadHandlesEmptyRange(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'totalsPayload');
+        $m->setAccessible(true);
+        $p = $m->invoke($c, ['line_items' => [], 'subtotal' => 0.0, 'tax' => ['enabled' => false, 'amount' => 0.0], 'total' => 0.0]);
+        $this->assertSame(0.0, $p['hours']);
+        $this->assertSame(0, $p['line_count']);
+        $this->assertSame('$', $p['symbol'], 'missing currency falls back to $');
+    }
 }

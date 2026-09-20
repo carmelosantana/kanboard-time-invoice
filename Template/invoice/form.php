@@ -51,6 +51,12 @@
         </div>
     <?php endif ?>
 
+    <div class="timeinvoice-totals timeinvoice-recalc"
+         data-url="<?= $this->url->href('InvoiceController', 'previewTotals', array('plugin' => 'TimeInvoice')) ?>"
+         data-recalc-fields="start_date,end_date,granularity,rate,tax_enabled,tax_rate">
+        <span class="timeinvoice-totals-idle"><?= t('Totals update as you change the range, grouping, rate or tax.') ?></span>
+    </div>
+
     <div class="form-actions">
         <button type="submit" class="btn btn-blue"><?= t('Save draft') ?></button>
     </div>

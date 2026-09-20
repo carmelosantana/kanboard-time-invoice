@@ -285,6 +285,46 @@ class InvoiceController extends BaseController
         ];
     }
 
+    /**
+     * Condense a snapshot into the numbers the draft form shows live.
+     * Pure seam — unit-testable without a request or TimeReport.
+     *
+     * @return array{hours:float,line_count:int,subtotal:float,tax:float,total:float,symbol:string}
+     */
+    protected function totalsPayload(array $snapshot): array
+    {
+        $items = $snapshot['line_items'] ?? [];
+        return [
+            'hours'      => round((float) array_sum(array_column($items, 'hours')), 2),
+            'line_count' => count($items),
+            'subtotal'   => (float) ($snapshot['subtotal'] ?? 0.0),
+            'tax'        => (float) ($snapshot['tax']['amount'] ?? 0.0),
+            'total'      => (float) ($snapshot['total'] ?? 0.0),
+            'symbol'     => (string) ($snapshot['currency']['symbol'] ?? '$'),
+        ];
+    }
+
+    /**
+     * POST — live totals for the draft form. Mirrors generateCoverNote()'s seam:
+     * the form AJAXes $form.serialize(), so project_id arrives in the BODY.
+     */
+    public function previewTotals(): void
+    {
+        $this->checkCSRFForm();
+        $userId = $this->userSession->getId();
+        // getValues() is single-use/stateful — read it ONCE.
+        $values = $this->request->getValues();
+        $projectId = $this->requestProjectId($values);
+
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+            $this->response->json(['error' => t('Not available for this project.')], 400);
+            return;
+        }
+
+        $draft = array_merge($this->buildDraftFromRequest($values), ['project_id' => $projectId]);
+        $this->response->json($this->totalsPayload($this->freezeSnapshot($draft, $userId)));
+    }
+
     public function send(): void
     {
         $this->checkCSRFParam();
