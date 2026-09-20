@@ -39,6 +39,11 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 **Baseline before Task 1: 59 tests, 221 assertions, OK.**
 
+> **`tests/units.sqlite.xml` sets `stopOnError="true" stopOnFailure="true"`.** The run
+> halts at the first red test, so a filtered run of several new tests will report
+> `Tests: 1` while any of them is still failing. That is the harness stopping early,
+> not the filter failing to match. Expect the full count only once they are green.
+
 ### Test file conventions
 
 Every test file starts:
@@ -107,7 +112,7 @@ Fixes audit findings A2 and A3. TimeInvoice is the only plugin in the suite with
 - Consumes: nothing.
 - Produces: the `timeinvoice/settings` page is reachable from Settings; `SettingsController::show()` and `::save()` throw `Kanboard\Core\Controller\AccessForbiddenException` for non-admins instead of redirecting.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `Test/TemplateAssetsTest.php`:
 
@@ -170,7 +175,7 @@ public function testSaveIsBlockedForNonAdmin(): void
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testConfigSidebarPartialExistsAndLinks|testPluginRegistersConfigSidebarHook|testShowThrowsForNonAdmin|testSaveIsBlockedForNonAdmin'
@@ -178,7 +183,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — missing file `Template/config/sidebar.php`, missing hook string, and `show()`/`save()` redirect instead of throwing.
 
-- [ ] **Step 3: Create the sidebar partial**
+- [x] **Step 3: Create the sidebar partial**
 
 Create `Template/config/sidebar.php` (bare `<li>` — it is injected into core's `<ul>`):
 
@@ -188,7 +193,7 @@ Create `Template/config/sidebar.php` (bare `<li>` — it is injected into core's
 </li>
 ```
 
-- [ ] **Step 4: Register the hook**
+- [x] **Step 4: Register the hook**
 
 In `Plugin.php`, in the "Entry points" block after the existing `template:header:dropdown` attach, add:
 
@@ -196,7 +201,7 @@ In `Plugin.php`, in the "Entry points" block after the existing `template:header
 $this->hook->on('template:config:sidebar', ['template' => 'TimeInvoice:config/sidebar']);
 ```
 
-- [ ] **Step 5: Switch the controller to the config layout and the throwing gate**
+- [x] **Step 5: Switch the controller to the config layout and the throwing gate**
 
 In `Controller/SettingsController.php`, add the import under the existing `use`:
 
@@ -230,7 +235,7 @@ public function save(): void
 
 Note: `layout->config()` replaces `$params['values']` with `configModel->getAll()` only when `values` is empty — this page always passes a non-empty `values`, so the settings form is unaffected.
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testConfigSidebarPartialExistsAndLinks|testPluginRegistersConfigSidebarHook|testShowThrowsForNonAdmin|testSaveIsBlockedForNonAdmin'
@@ -238,7 +243,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (4 tests).
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -246,7 +251,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 62 tests.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Template/config/sidebar.php Plugin.php Controller/SettingsController.php Test/SettingsControllerTest.php Test/TemplateAssetsTest.php
@@ -273,7 +278,7 @@ Fixes audit finding A1 — the top-level Invoices page has no way to start an in
 - Consumes: `accessibleProjectIds(int $userId): array` (existing).
 - Produces: `protected function accessibleProjects(int $userId): array` returning `array<int,string>` of `project_id => name`, sorted by name — consumed by the list template's picker.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `Test/InvoiceControllerTest.php`:
 
@@ -315,9 +320,9 @@ private function loginAsAdmin(): void
 }
 ```
 
-Note: `assertSame($guarded, array_keys($projects))` will only hold if both are sorted identically — if it fails on ordering alone, relax to comparing sorted copies, but keep the set-equality assertion. The point of the test is that the picker cannot offer a project the guard will later reject.
+Note: sort both sides before comparing, and assert the fixture is non-empty first. `accessibleProjectIds()` resolves through `getActiveProjectsByUser()`, which is **membership-based — being an app admin is not enough**. Without `projectUserRoleModel->addUser($pid, 1, Role::PROJECT_MANAGER)` on each project, both sides come back `[]` and the set-equality assertion passes vacuously.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testAccessibleProjects'
@@ -325,7 +330,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL with `ReflectionException: Method accessibleProjects does not exist`.
 
-- [ ] **Step 3: Implement `accessibleProjects()`**
+- [x] **Step 3: Implement `accessibleProjects()`**
 
 In `Controller/InvoiceController.php`, directly after `accessibleProjectIds()`:
 
@@ -351,7 +356,7 @@ protected function accessibleProjects(int $userId): array
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testAccessibleProjects'
@@ -359,7 +364,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Pass the projects into both list views**
+- [x] **Step 5: Pass the projects into both list views**
 
 In `list()`, add to the non-dependency-missing `html()` params array:
 
@@ -369,7 +374,7 @@ In `list()`, add to the non-dependency-missing `html()` params array:
 
 In the `missing_dependency` early-return params array add `'projects' => [],` and in `project()` add `'projects' => [],` (the per-project list already has its project and shows the direct create button).
 
-- [ ] **Step 6: Add the picker to the template**
+- [x] **Step 6: Add the picker to the template**
 
 In `Template/invoice/list.php`, replace the `<?php if ($project): ?>` block (lines 6-8) with:
 
@@ -394,7 +399,7 @@ In `Template/invoice/list.php`, replace the `<?php if ($project): ?>` block (lin
 
 The hidden `plugin`/`controller`/`action` fields are required because Kanboard resolves plugin routes from query parameters when a GET form posts its own query string.
 
-- [ ] **Step 7: Style the picker**
+- [x] **Step 7: Style the picker**
 
 Append to `Assets/css/timeinvoice.css`:
 
@@ -402,7 +407,7 @@ Append to `Assets/css/timeinvoice.css`:
 .timeinvoice-new { margin: 0 0 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 ```
 
-- [ ] **Step 8: Run the full suite**
+- [x] **Step 8: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -410,7 +415,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 64 tests.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Controller/InvoiceController.php Template/invoice/list.php Assets/css/timeinvoice.css Test/InvoiceControllerTest.php
@@ -437,7 +442,7 @@ Fixes audit finding A4 — `timeinvoice:defaults` is read by `projectDefaults()`
 - Consumes: `projectMetadataModel` (core), `Kanboard\Core\Security\Role`.
 - Produces: the `timeinvoice:defaults` project-metadata key, a JSON object with keys `rate` (float), `currency` (`{code,symbol}`), `terms_days` (int), `terms` (string), `client` (`{name,address,email}`). This is the exact shape `InvoiceController::projectDefaults()` already decodes and `DefaultsResolver::resolve()` already merges.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `Test/ProjectSettingsControllerTest.php`:
 
@@ -545,7 +550,7 @@ class ProjectSettingsControllerTest extends Base
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ProjectSettingsControllerTest.php --no-coverage
@@ -553,7 +558,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — `Class ProjectSettingsController not found`.
 
-- [ ] **Step 3: Write the controller**
+- [x] **Step 3: Write the controller**
 
 Create `Controller/ProjectSettingsController.php`:
 
@@ -644,7 +649,7 @@ class ProjectSettingsController extends BaseController
 }
 ```
 
-- [ ] **Step 4: Write the template**
+- [x] **Step 4: Write the template**
 
 Create `Template/invoice/project_settings.php`:
 
@@ -685,7 +690,7 @@ Create `Template/invoice/project_settings.php`:
 </form>
 ```
 
-- [ ] **Step 5: Add routes and the sidebar link**
+- [x] **Step 5: Add routes and the sidebar link**
 
 In `Plugin.php`, add to the route block:
 
@@ -705,23 +710,23 @@ Replace `Template/invoice/sidebar.php` with:
 </li>
 ```
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ProjectSettingsControllerTest.php --no-coverage
 ```
 
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 68 tests.
+Expected: OK, 69 tests.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Controller/ProjectSettingsController.php Template/invoice/project_settings.php Template/invoice/sidebar.php Plugin.php Test/ProjectSettingsControllerTest.php
@@ -827,7 +832,7 @@ Expected: PASS (2 tests).
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 70 tests.
+Expected: OK, 71 tests.
 
 - [ ] **Step 6: Commit**
 
@@ -1063,7 +1068,7 @@ Expected: PASS (3 tests).
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 73 tests.
+Expected: OK, 74 tests.
 
 - [ ] **Step 9: Commit**
 
@@ -1156,7 +1161,7 @@ Expected: PASS (1 test, 3 assertions).
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 74 tests.
+Expected: OK, 75 tests.
 
 - [ ] **Step 6: Commit**
 
@@ -1248,7 +1253,7 @@ Expected: PASS.
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 75 tests.
+Expected: OK, 76 tests.
 
 - [ ] **Step 6: Commit**
 
@@ -1355,7 +1360,7 @@ Expected: PASS (2 tests).
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 77 tests. If an existing assertion expects `'Sent'`, update it — the rename is the point.
+Expected: OK, 78 tests. If an existing assertion expects `'Sent'`, update it — the rename is the point.
 
 - [ ] **Step 7: Commit**
 
@@ -1506,7 +1511,7 @@ Expected: PASS (2 tests).
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 79 tests. `testFreezeSnapshotBuildsLineItemsAndTotals` still passes — its draft has no project defaults, so it falls through to the global 30-day default as before.
+Expected: OK, 80 tests. `testFreezeSnapshotBuildsLineItemsAndTotals` still passes — its draft has no project defaults, so it falls through to the global 30-day default as before.
 
 - [ ] **Step 8: Commit**
 
@@ -1753,7 +1758,7 @@ Then visit http://localhost:8081 (admin/admin). This step has no automated subst
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 82 tests.
+Expected: OK, 83 tests.
 
 - [ ] **Step 11: Commit**
 
@@ -1832,9 +1837,12 @@ public function testUnbilledParticipantsIsGenericForANonManager(): void
         public function participants($pid, $s, $e, $uid) { return [1 => ['name' => 'Me', 'hours' => 10.0]]; }
     };
     $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
-    // Two members → the project is genuinely multi-person.
-    $this->container['projectUserRoleModel']->addUser($pid, 1, \Kanboard\Core\Security\Role::PROJECT_MEMBER);
-    $this->container['projectUserRoleModel']->addUser($pid, 2, \Kanboard\Core\Security\Role::PROJECT_MEMBER);
+    // Two members → the project is genuinely multi-person. NOTE: addUser()
+    // returns false for a user id that does not exist, which would leave the
+    // project memberless and pass this test for the wrong reason (see Task 3).
+    $um = new \Kanboard\Model\UserModel($this->container);
+    $this->container['projectUserRoleModel']->addUser($pid, 1, \Kanboard\Core\Security\Role::PROJECT_MANAGER);
+    $this->container['projectUserRoleModel']->addUser($pid, $um->create(['username' => 'other', 'name' => 'Other']), \Kanboard\Core\Security\Role::PROJECT_MEMBER);
 
     $c = new InvoiceController($this->container);
     $m = new ReflectionMethod($c, 'unbilledParticipants');
@@ -1987,7 +1995,7 @@ Expected: PASS (4 tests). If `projectUserRoleModel->addUser()` has a different s
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 86 tests.
+Expected: OK, 87 tests.
 
 - [ ] **Step 9: Commit**
 
@@ -2088,7 +2096,7 @@ attachment. Download or view the PDF and send it however you normally do.
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
 ```
 
-Expected: OK, 86 tests.
+Expected: OK, 87 tests.
 
 - [ ] **Step 7: Commit**
 
@@ -2103,7 +2111,7 @@ Documents the new controls and bumps the version in both places CI checks."
 
 ## Done criteria
 
-- [ ] Full suite green: `./testing/run-plugin-tests.sh TimeInvoice` → OK, 86 tests.
+- [ ] Full suite green: `./testing/run-plugin-tests.sh TimeInvoice` → OK, 87 tests.
 - [ ] `Settings → Invoices` is reachable from the admin sidebar without typing a URL.
 - [ ] A project's sidebar offers both *Invoices* and *Invoice settings*.
 - [ ] The top-level *Invoices* page offers a project picker and a create button.
