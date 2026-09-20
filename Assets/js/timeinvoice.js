@@ -7,9 +7,9 @@
             e.preventDefault();
         }
     });
-    // Confirm the send transition (freezes the snapshot + assigns a number).
+    // Confirm the issue transition (freezes the snapshot + assigns a number).
     jQuery(document).on("click", ".timeinvoice-send", function (e) {
-        if (!window.confirm("Send this invoice? Its number and totals will be locked.")) {
+        if (!window.confirm("Issue this invoice? Its number and totals will be locked.")) {
             e.preventDefault();
         }
     });

@@ -93,4 +93,11 @@ class TemplateAssetsTest extends Base
             $this->assertStringNotContainsString($action, $src, "$action must live on the show page, not in a list row");
         }
     }
+
+    public function testNoSendWordingRemainsInUi(): void
+    {
+        $js = file_get_contents($this->root() . '/Assets/js/timeinvoice.js');
+        $this->assertStringNotContainsString('Send this invoice?', $js, 'confirm copy must not promise an email');
+        $this->assertStringContainsString('Issue this invoice?', $js);
+    }
 }

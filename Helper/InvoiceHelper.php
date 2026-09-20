@@ -15,7 +15,10 @@ class InvoiceHelper extends Base
     {
         return match ($status) {
             'draft' => t('Draft'),
-            'sent'  => t('Sent'),
+            // No email is ever sent (Kanboard's mail seam cannot attach a PDF),
+            // so the state is "issued". The stored value stays 'sent' —
+            // relabelling is a presentation change, not a data migration.
+            'sent'  => t('Issued'),
             'paid'  => t('Paid'),
             default => ucfirst($status),
         };

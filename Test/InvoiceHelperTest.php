@@ -20,4 +20,13 @@ class InvoiceHelperTest extends Base
         $this->assertSame('Paid', $h->statusLabel('paid'));
         $this->assertNotSame('', $h->statusClass('sent'));
     }
+
+    public function testSentStatusRendersAsIssued(): void
+    {
+        $h = new \Kanboard\Plugin\TimeInvoice\Helper\InvoiceHelper($this->container);
+        $this->assertSame('Issued', $h->statusLabel('sent'), 'no email is sent; the state is "issued"');
+        $this->assertSame('timeinvoice-status-sent', $h->statusClass('sent'), 'CSS class keeps the stored value');
+        $this->assertSame('Draft', $h->statusLabel('draft'));
+        $this->assertSame('Paid', $h->statusLabel('paid'));
+    }
 }
