@@ -20,6 +20,8 @@
     <?= $this->form->label(t('Tax rate %%'), 'tax_rate') ?>
     <?= $this->form->number('tax_rate', $values, array(), array('step' => '0.001')) ?>
 
+    <h3><?= t('Client') ?></h3>
+    <p class="form-help"><?= t('Inherited from the project. Changes here apply to this invoice only.') ?></p>
     <?= $this->form->label(t('Client name'), 'client_name') ?>
     <?= $this->form->text('client_name', array('client_name' => $values['client']['name'] ?? '')) ?>
     <?= $this->form->label(t('Client address'), 'client_address') ?>

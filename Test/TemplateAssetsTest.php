@@ -68,4 +68,10 @@ class TemplateAssetsTest extends Base
         $this->assertStringContainsString('template:config:sidebar', $src, 'settings page must be linked from the admin sidebar');
         $this->assertStringContainsString('TimeInvoice:config/sidebar', $src);
     }
+
+    public function testFormLabelsClientAsInheritedFromProject(): void
+    {
+        $src = file_get_contents($this->root() . '/Template/invoice/form.php');
+        $this->assertStringContainsString('Inherited from the project', $src, 'the client block must say where its values come from');
+    }
 }

@@ -193,4 +193,35 @@ class InvoiceControllerTest extends Base
     {
         $_SESSION['user'] = ['id' => 1, 'role' => \Kanboard\Core\Security\Role::APP_ADMIN];
     }
+
+    public function testFormValuesInheritProjectClientAndAreOverriddenByDraft(): void
+    {
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
+        $this->container['projectMetadataModel']->save($pid, [
+            'timeinvoice:defaults' => json_encode([
+                'rate'   => 165.0,
+                'client' => ['name' => 'Acme Inc', 'email' => 'ap@acme.example'],
+            ]),
+        ]);
+
+        $c = new InvoiceController($this->container);
+        $g = new ReflectionMethod($c, 'globalDefaults');
+        $g->setAccessible(true);
+        $pd = new ReflectionMethod($c, 'projectDefaults');
+        $pd->setAccessible(true);
+
+        $merged = \Kanboard\Plugin\TimeInvoice\Model\DefaultsResolver::resolve(
+            $g->invoke($c), $pd->invoke($c, $pid), []
+        );
+        $this->assertSame('Acme Inc', $merged['client']['name']);
+        // Written here with plain json_encode(), so 165.0 round-trips as int 165.
+        // The controller's own writes use JSON_PRESERVE_ZERO_FRACTION; either way
+        // every consumer casts, so assert the value, not the PHP type.
+        $this->assertEquals(165.0, $merged['rate']);
+
+        $merged2 = \Kanboard\Plugin\TimeInvoice\Model\DefaultsResolver::resolve(
+            $g->invoke($c), $pd->invoke($c, $pid), ['client' => ['name' => 'Beta LLC']]
+        );
+        $this->assertSame('Beta LLC', $merged2['client']['name'], 'draft client must override the project client');
+    }
 }
