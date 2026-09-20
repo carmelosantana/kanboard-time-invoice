@@ -149,4 +149,48 @@ class InvoiceControllerTest extends Base
         $this->assertSame(0, $m->invoke($c, []), 'missing project_id → 0');
         $this->assertSame(0, $m->invoke($c, ['project_id' => 'abc']), 'non-numeric project_id → 0');
     }
+
+    public function testAccessibleProjectsReturnsIdNameMapForGuardedIdsOnly(): void
+    {
+        $this->loginAsAdmin();
+        $pm = new \Kanboard\Model\ProjectModel($this->container);
+        $a = $pm->create(['name' => 'Zulu Project']);
+        $b = $pm->create(['name' => 'Alpha Project']);
+        // accessibleProjectIds() is membership-based (getActiveProjectsByUser),
+        // so being an app admin is NOT enough — seat the user on both projects.
+        $this->container['projectUserRoleModel']->addUser($a, 1, \Kanboard\Core\Security\Role::PROJECT_MANAGER);
+        $this->container['projectUserRoleModel']->addUser($b, 1, \Kanboard\Core\Security\Role::PROJECT_MANAGER);
+
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'accessibleProjects');
+        $m->setAccessible(true);
+        $projects = $m->invoke($c, 1);
+
+        $ids = new ReflectionMethod($c, 'accessibleProjectIds');
+        $ids->setAccessible(true);
+        $guarded = $ids->invoke($c, 1);
+
+        sort($guarded);
+        $offered = array_keys($projects);
+        sort($offered);
+        $this->assertNotSame([], $offered, 'sanity: the fixture must grant access to something');
+        $this->assertSame($guarded, $offered, 'picker options must be exactly the ids the access guard allows');
+        $this->assertSame('Alpha Project', reset($projects), 'sorted by name, not id');
+        $this->assertArrayHasKey($a, $projects);
+        $this->assertArrayHasKey($b, $projects);
+    }
+
+    public function testAccessibleProjectsEmptyWhenNoProjects(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'accessibleProjects');
+        $m->setAccessible(true);
+        $this->assertSame([], $m->invoke($c, 99));
+    }
+
+    /** Seat an app-admin user in the session (harness starts with an empty session). */
+    private function loginAsAdmin(): void
+    {
+        $_SESSION['user'] = ['id' => 1, 'role' => \Kanboard\Core\Security\Role::APP_ADMIN];
+    }
 }

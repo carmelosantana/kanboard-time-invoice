@@ -17,6 +17,26 @@ class InvoiceController extends BaseController
         return array_map('intval', $this->projectPermissionModel->getActiveProjectIds($userId));
     }
 
+    /**
+     * The picker's options, derived from the SAME id list the access guard uses,
+     * so the dropdown can never offer a project that form()/project() will reject.
+     * One hashtable query rather than N getById() calls.
+     *
+     * @return array<int,string> project_id => name, sorted by name
+     */
+    protected function accessibleProjects(int $userId): array
+    {
+        $ids = $this->accessibleProjectIds($userId);
+        if ($ids === []) {
+            return [];
+        }
+        $rows = $this->db->hashtable(\Kanboard\Model\ProjectModel::TABLE)
+            ->in('id', $ids)
+            ->getAll('id', 'name');
+        asort($rows);
+        return $rows;
+    }
+
     protected function aiRegistry(): ?object
     {
         $cls = '\\Kanboard\\Plugin\\AiConnector\\Model\\ProviderRegistry';
@@ -54,7 +74,7 @@ class InvoiceController extends BaseController
         if (! $this->hasTimeReport()) {
             $this->response->html($this->helper->layout->app('TimeInvoice:invoice/list', [
                 'title' => t('Invoices'), 'missing_dependency' => true,
-                'invoices' => [], 'outstanding' => 0.0, 'project' => null,
+                'invoices' => [], 'outstanding' => 0.0, 'project' => null, 'projects' => [],
                 'currency' => array('code' => 'USD', 'symbol' => '$'),
             ]));
             return;
@@ -66,6 +86,7 @@ class InvoiceController extends BaseController
             'invoices'    => $this->invoiceModel->listAll($pids),
             'outstanding' => $this->invoiceModel->outstandingTotal($pids),
             'project'     => null,
+            'projects'    => $this->accessibleProjects($userId),
             'missing_dependency' => false,
             'currency'    => $this->globalDefaults()['currency'] ?? array('code' => 'USD', 'symbol' => '$'),
         ]));
@@ -85,6 +106,7 @@ class InvoiceController extends BaseController
             'invoices'    => $this->invoiceModel->listByProject($projectId),
             'outstanding' => $this->invoiceModel->outstandingTotal([$projectId]),
             'project'     => $this->projectModel->getById($projectId),
+            'projects'    => [],
             'missing_dependency' => ! $this->hasTimeReport(),
             'currency'    => $this->globalDefaults()['currency'] ?? array('code' => 'USD', 'symbol' => '$'),
         ]));
