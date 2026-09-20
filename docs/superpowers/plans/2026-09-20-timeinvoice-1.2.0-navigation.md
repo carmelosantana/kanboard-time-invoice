@@ -753,7 +753,7 @@ Completes Q4 — the client belongs to the project, and the invoice inherits wit
 - Consumes: `projectDefaults(int $projectId): array` (existing), now populated by Task 3; `DefaultsResolver::resolve()` (existing).
 - Produces: `$values['client']` in the form view is the project's client when the draft has none, and the draft's own when it has one.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `Test/InvoiceControllerTest.php`:
 
@@ -799,7 +799,7 @@ public function testFormLabelsClientAsInheritedFromProject(): void
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testFormValuesInheritProjectClient|testFormLabelsClientAsInherited'
@@ -809,7 +809,7 @@ Expected: FAIL — `testFormLabelsClientAsInheritedFromProject` fails because th
 
 `testFormValuesInheritProjectClientAndAreOverriddenByDraft` may already pass: `DefaultsResolver` layers correctly and, after Task 3, `projectDefaults()` finally has data to return. That is the point — it pins behaviour Task 3 unlocked so a later change cannot silently break inheritance. If instead it FAILS with the project client clobbered by an empty global one, fix `DefaultsResolver::isEmpty()` to treat `['name'=>'','address'=>'','email'=>'']` as empty before continuing.
 
-- [ ] **Step 3: Add a client-source hint to the form**
+- [x] **Step 3: Add a client-source hint to the form**
 
 In `Template/invoice/form.php`, immediately before the `Client name` label, add:
 
@@ -818,7 +818,7 @@ In `Template/invoice/form.php`, immediately before the `Client name` label, add:
     <p class="form-help"><?= t('Inherited from the project. Changes here apply to this invoice only.') ?></p>
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testFormValuesInheritProjectClient|testFormLabelsClientAsInherited'
@@ -826,7 +826,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -834,7 +834,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 71 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Controller/InvoiceController.php Template/invoice/form.php Test/InvoiceControllerTest.php Test/TemplateAssetsTest.php
@@ -859,7 +859,7 @@ Delivers Q2's detail page — the surface every other action moves onto.
 - Consumes: `snapshotForPdf(int $projectId, string $id, int $userId): array` (existing) — returns a live-computed snapshot with `status='draft'` and `number=null` for drafts, or the stored frozen record for sent/paid.
 - Produces: route `timeinvoice/show` → `InvoiceController::show()`; template `TimeInvoice:invoice/show` receiving `project`, `invoice` (snapshot array), `status` (string), `invoice_id` (string).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `Test/InvoiceControllerTest.php`:
 
@@ -919,7 +919,7 @@ public function testShowTemplateExistsAndCarriesActions(): void
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testShowRouteRegistered|testShowTemplateExists|testSnapshotForPdfDrivesShow'
@@ -927,7 +927,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — route string absent, `Template/invoice/show.php` missing.
 
-- [ ] **Step 3: Add the controller action**
+- [x] **Step 3: Add the controller action**
 
 In `Controller/InvoiceController.php`, after `project()`:
 
@@ -961,7 +961,7 @@ public function show(): void
 }
 ```
 
-- [ ] **Step 4: Add the route**
+- [x] **Step 4: Add the route**
 
 In `Plugin.php`, after the `timeinvoice/form` route:
 
@@ -969,7 +969,7 @@ In `Plugin.php`, after the `timeinvoice/form` route:
 $this->route->addRoute('timeinvoice/show', 'InvoiceController', 'show', 'TimeInvoice');
 ```
 
-- [ ] **Step 5: Write the show template**
+- [x] **Step 5: Write the show template**
 
 Create `Template/invoice/show.php`:
 
@@ -1047,7 +1047,7 @@ Create `Template/invoice/show.php`:
 <?php endif ?>
 ```
 
-- [ ] **Step 6: Style the show page**
+- [x] **Step 6: Style the show page**
 
 Append to `Assets/css/timeinvoice.css`:
 
@@ -1057,7 +1057,7 @@ Append to `Assets/css/timeinvoice.css`:
 .timeinvoice-parties > div { min-width: 220px; }
 ```
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [x] **Step 7: Run tests to verify they pass**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testShowRouteRegistered|testShowTemplateExists|testSnapshotForPdfDrivesShow'
@@ -1065,7 +1065,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (3 tests).
 
-- [ ] **Step 8: Run the full suite**
+- [x] **Step 8: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -1073,7 +1073,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 74 tests.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Controller/InvoiceController.php Template/invoice/show.php Plugin.php Assets/css/timeinvoice.css Test/InvoiceControllerTest.php Test/TemplateAssetsTest.php
@@ -1098,7 +1098,7 @@ Delivers the second half of Q2 — look at the PDF without downloading it.
 - Consumes: nothing new.
 - Produces: `protected function contentDisposition(bool $inline, string $name): string` — a pure seam returning the full header value. `pdf()` accepts an `inline=1` query parameter.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `Test/InvoiceControllerTest.php`:
 
@@ -1114,7 +1114,7 @@ public function testContentDispositionSwitchesOnInlineFlag(): void
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter testContentDispositionSwitchesOnInlineFlag
@@ -1122,7 +1122,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL with `ReflectionException: Method contentDisposition does not exist`.
 
-- [ ] **Step 3: Add the seam and wire it into `pdf()`**
+- [x] **Step 3: Add the seam and wire it into `pdf()`**
 
 In `Controller/InvoiceController.php`, add above `pdf()`:
 
@@ -1150,7 +1150,7 @@ $this->response->withBody($bytes);
 $this->response->send();
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter testContentDispositionSwitchesOnInlineFlag
@@ -1158,7 +1158,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (1 test, 3 assertions).
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -1166,7 +1166,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 75 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Controller/InvoiceController.php Test/InvoiceControllerTest.php
@@ -1190,7 +1190,7 @@ Delivers Q9.
 - Consumes: route `timeinvoice/show` (Task 5).
 - Produces: the list's only per-row link is the invoice number → show page.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `Test/TemplateAssetsTest.php`:
 
@@ -1205,7 +1205,7 @@ public function testListRowCollapsesToShowPage(): void
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter testListRowCollapsesToShowPage
@@ -1213,7 +1213,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — `'markPaid'` is still present in the row actions.
 
-- [ ] **Step 3: Rewrite the table**
+- [x] **Step 3: Rewrite the table**
 
 In `Template/invoice/list.php`, replace the whole `<table>` block with:
 
@@ -1242,7 +1242,7 @@ In `Template/invoice/list.php`, replace the whole `<table>` block with:
 
 `$this->url->link()` escapes its label, so an invoice number needs no separate `text->e()`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter testListRowCollapsesToShowPage
@@ -1250,7 +1250,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS.
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -1258,7 +1258,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 76 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Template/invoice/list.php Test/TemplateAssetsTest.php
@@ -1283,7 +1283,7 @@ Delivers Q1's rename and Q17. The route, the controller method and the stored `'
 - Consumes: nothing.
 - Produces: `InvoiceHelper::statusLabel('sent')` returns `t('Issued')`. The stored status value is unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `Test/InvoiceHelperTest.php`:
 
@@ -1309,7 +1309,7 @@ public function testNoSendWordingRemainsInUi(): void
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testSentStatusRendersAsIssued|testNoSendWordingRemainsInUi'
@@ -1317,7 +1317,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — `statusLabel('sent')` returns `'Sent'`; the JS confirm still says "Send this invoice?".
 
-- [ ] **Step 3: Relabel the status**
+- [x] **Step 3: Relabel the status**
 
 In `Helper/InvoiceHelper.php`:
 
@@ -1336,7 +1336,7 @@ public function statusLabel(string $status): string
 }
 ```
 
-- [ ] **Step 4: Fix the confirm copy**
+- [x] **Step 4: Fix the confirm copy**
 
 In `Assets/js/timeinvoice.js`, replace the send handler's confirm string:
 
@@ -1349,7 +1349,7 @@ In `Assets/js/timeinvoice.js`, replace the send handler's confirm string:
     });
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testSentStatusRendersAsIssued|testNoSendWordingRemainsInUi'
@@ -1357,7 +1357,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (2 tests).
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -1365,7 +1365,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 78 tests. If an existing assertion expects `'Sent'`, update it — the rename is the point.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Helper/InvoiceHelper.php Assets/js/timeinvoice.js Test/InvoiceHelperTest.php Test/TemplateAssetsTest.php
@@ -1391,7 +1391,7 @@ Delivers Q16 and fixes audit finding A11.
 - Consumes: `projectDefaults()`, `globalDefaults()` (existing).
 - Produces: `buildDraftFromRequest()` no longer emits a `currency` key. `freezeSnapshot()` resolves `terms_days` as draft → project → global, and currency as project → global.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `Test/InvoiceControllerTest.php`:
 
@@ -1447,7 +1447,7 @@ public function testBuildDraftFromRequestNoLongerEmitsDeadCurrencyKey(): void
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testDraftTermsDaysOverrides|testBuildDraftFromRequestNoLongerEmits'
@@ -1455,11 +1455,11 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — `freezeSnapshot()` ignores the draft's `terms_days`, and `buildDraftFromRequest()` still emits `currency`.
 
-- [ ] **Step 3: Drop the dead currency key**
+- [x] **Step 3: Drop the dead currency key**
 
 In `buildDraftFromRequest()`, delete the `'currency' => [...]` line entirely. The remaining array is unchanged.
 
-- [ ] **Step 4: Honour the draft's terms_days at freeze**
+- [x] **Step 4: Honour the draft's terms_days at freeze**
 
 In `freezeSnapshot()`, replace the currency/terms resolution block and its stale comment:
 
@@ -1490,7 +1490,7 @@ In `freezeSnapshot()`, replace the currency/terms resolution block and its stale
 
 The rest of the method body is unchanged.
 
-- [ ] **Step 5: Put terms on the form**
+- [x] **Step 5: Put terms on the form**
 
 In `Template/invoice/form.php`, after the tax fields and before the `Client` heading:
 
@@ -1500,7 +1500,7 @@ In `Template/invoice/form.php`, after the tax fields and before the `Client` hea
     <p class="form-help"><?= t('Overrides the project default for this invoice only.') ?></p>
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testDraftTermsDaysOverrides|testBuildDraftFromRequestNoLongerEmits'
@@ -1508,7 +1508,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (2 tests).
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -1516,7 +1516,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 80 tests. `testFreezeSnapshotBuildsLineItemsAndTotals` still passes — its draft has no project defaults, so it falls through to the global 30-day default as before.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Controller/InvoiceController.php Template/invoice/form.php Test/InvoiceControllerTest.php
@@ -1543,7 +1543,7 @@ Delivers Q5 and fixes audit finding A9.
 - Consumes: `buildDraftFromRequest(array $v): array`, `freezeSnapshot(array $draft, int $userId): array`, `requestProjectId(array $values): int` (all existing).
 - Produces: `protected function totalsPayload(array $snapshot): array` returning `['hours'=>float,'line_count'=>int,'subtotal'=>float,'tax'=>float,'total'=>float,'symbol'=>string]`; route `timeinvoice/preview-totals` → `InvoiceController::previewTotals()` responding JSON.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `Test/InvoiceControllerTest.php`:
 
@@ -1601,7 +1601,7 @@ public function testFormAndJsCarryTheLiveTotalsRegion(): void
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testTotalsPayload|testFormAndJsCarryTheLiveTotals'
@@ -1609,7 +1609,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — `totalsPayload` does not exist; the form has no totals region.
 
-- [ ] **Step 3: Add the payload seam and the endpoint**
+- [x] **Step 3: Add the payload seam and the endpoint**
 
 In `Controller/InvoiceController.php`, after `freezeSnapshot()`:
 
@@ -1655,7 +1655,7 @@ public function previewTotals(): void
 }
 ```
 
-- [ ] **Step 4: Add the route**
+- [x] **Step 4: Add the route**
 
 In `Plugin.php`, beside the `generate-note` route:
 
@@ -1663,7 +1663,7 @@ In `Plugin.php`, beside the `generate-note` route:
 $this->route->addRoute('timeinvoice/preview-totals', 'InvoiceController', 'previewTotals', 'TimeInvoice');
 ```
 
-- [ ] **Step 5: Add the totals region to the form**
+- [x] **Step 5: Add the totals region to the form**
 
 In `Template/invoice/form.php`, add the region just above `<div class="form-actions">`. The fields that trigger a recalc are named in a data attribute rather than each carrying a class, because `$this->form->number()` and `$this->form->select()` do not take a class argument in the signatures used here:
 
@@ -1675,7 +1675,7 @@ In `Template/invoice/form.php`, add the region just above `<div class="form-acti
     </div>
 ```
 
-- [ ] **Step 6: Add the delegated handler**
+- [x] **Step 6: Add the delegated handler**
 
 Append inside the IIFE in `Assets/js/timeinvoice.js`:
 
@@ -1728,7 +1728,7 @@ Append inside the IIFE in `Assets/js/timeinvoice.js`:
     });
 ```
 
-- [ ] **Step 7: Style it**
+- [x] **Step 7: Style it**
 
 Append to `Assets/css/timeinvoice.css`:
 
@@ -1737,7 +1737,7 @@ Append to `Assets/css/timeinvoice.css`:
 .timeinvoice-totals-idle { opacity: 0.7; }
 ```
 
-- [ ] **Step 8: Run tests to verify they pass**
+- [x] **Step 8: Run tests to verify they pass**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter 'testTotalsPayload|testFormAndJsCarryTheLiveTotals'
@@ -1745,7 +1745,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (3 tests).
 
-- [ ] **Step 9: Verify in a real browser**
+- [x] **Step 9: Verify in a real browser**
 
 Start the dev stack, open a project's New invoice form, change the rate, and confirm the totals strip updates without a page reload:
 
@@ -1755,7 +1755,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing && docker compose -f
 
 Then visit http://localhost:8081 (admin/admin). This step has no automated substitute — the endpoint is unit-tested, the wiring is not.
 
-- [ ] **Step 10: Run the full suite**
+- [x] **Step 10: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -1763,7 +1763,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 83 tests.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add Controller/InvoiceController.php Plugin.php Template/invoice/form.php Assets/js/timeinvoice.js Assets/css/timeinvoice.css Test/InvoiceControllerTest.php Test/TemplateAssetsTest.php
@@ -1793,7 +1793,7 @@ Delivers Q11 — the read-only half of the A10 fix. The real "Bill hours for" co
 
 **Design note:** a non-manager cannot see other people's hours, so the banner can only be generic for them. To avoid a permanently-on banner, the generic form is shown **only when the project has more than one assignable member** — cheap, ungated, and it keeps solo projects silent.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `Test/InvoiceControllerTest.php`:
 
@@ -1865,7 +1865,7 @@ public function testUnbilledParticipantsSilentWithoutTimeReport(): void
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter testUnbilledParticipants
@@ -1873,7 +1873,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL with `ReflectionException: Method unbilledParticipants does not exist`.
 
-- [ ] **Step 3: Implement the check**
+- [x] **Step 3: Implement the check**
 
 In `Controller/InvoiceController.php`, after `accessibleProjects()`:
 
@@ -1929,7 +1929,7 @@ protected function unbilledParticipants(int $projectId, string $start, string $e
 }
 ```
 
-- [ ] **Step 4: Write the banner partial**
+- [x] **Step 4: Write the banner partial**
 
 Create `Template/invoice/_banner.php`:
 
@@ -1946,7 +1946,7 @@ Create `Template/invoice/_banner.php`:
 <?php endif ?>
 ```
 
-- [ ] **Step 5: Render it on both pages**
+- [x] **Step 5: Render it on both pages**
 
 In `form()`, add to the `html()` params:
 
@@ -1976,7 +1976,7 @@ In both `Template/invoice/form.php` and `Template/invoice/show.php`, immediately
 <?= $this->render('TimeInvoice:invoice/_banner', array('unbilled' => $unbilled)) ?>
 ```
 
-- [ ] **Step 6: Style it**
+- [x] **Step 6: Style it**
 
 Append to `Assets/css/timeinvoice.css`:
 
@@ -1984,7 +1984,7 @@ Append to `Assets/css/timeinvoice.css`:
 .timeinvoice-unbilled { margin: 8px 0 14px; }
 ```
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [x] **Step 7: Run tests to verify they pass**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/ --no-coverage --filter testUnbilledParticipants
@@ -1992,7 +1992,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS (4 tests). If `projectUserRoleModel->addUser()` has a different signature in this core version, adjust the test's setup — the assertion about `specific === false` is the contract that matters.
 
-- [ ] **Step 8: Run the full suite**
+- [x] **Step 8: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -2000,7 +2000,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 87 tests.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Controller/InvoiceController.php Template/invoice/_banner.php Template/invoice/form.php Template/invoice/show.php Assets/css/timeinvoice.css Test/InvoiceControllerTest.php
@@ -2024,7 +2024,7 @@ invoice silently omits everyone else's hours. Until 1.3.0 ships the real
 - Consumes: nothing.
 - Produces: version `1.2.0` in both required places.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `Test/PluginTest.php`, update the version assertion in `testMetadata()`:
 
@@ -2032,7 +2032,7 @@ In `Test/PluginTest.php`, update the version assertion in `testMetadata()`:
 $this->assertSame('1.2.0', $p->getPluginVersion());
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/PluginTest.php --no-coverage
@@ -2040,7 +2040,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: FAIL — `Failed asserting that '1.1.0' is identical to '1.2.0'`.
 
-- [ ] **Step 3: Bump both version strings**
+- [x] **Step 3: Bump both version strings**
 
 In `Plugin.php`:
 
@@ -2054,7 +2054,7 @@ In `plugin.json`:
     "version": "1.2.0",
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vendor/bin/phpunit --bootstrap tests/plugin-bootstrap.php -c tests/units.sqlite.xml plugins/TimeInvoice/Test/PluginTest.php --no-coverage
@@ -2062,7 +2062,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins/testing/kanboard-src && vend
 
 Expected: PASS — including `testVersionMatchesJson`, which pins the two in sync.
 
-- [ ] **Step 5: Document the new controls**
+- [x] **Step 5: Document the new controls**
 
 In `README.md`, after the "Purpose" section, insert:
 
@@ -2093,7 +2093,7 @@ attachment. Download or view the PDF and send it however you normally do.
 > several people, each at their own rate, arrives in 1.3.0.
 ```
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 ```bash
 cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-tests.sh TimeInvoice
@@ -2101,7 +2101,7 @@ cd /home/carmelo/Projects/Kanboard/kanboard-plugins && ./testing/run-plugin-test
 
 Expected: OK, 87 tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add plugin.json Plugin.php README.md Test/PluginTest.php
@@ -2114,17 +2114,17 @@ Documents the new controls and bumps the version in both places CI checks."
 
 ## Done criteria
 
-- [ ] Full suite green: `./testing/run-plugin-tests.sh TimeInvoice` → OK, 87 tests.
-- [ ] `Settings → Invoices` is reachable from the admin sidebar without typing a URL.
-- [ ] A project's sidebar offers both *Invoices* and *Invoice settings*.
-- [ ] The top-level *Invoices* page offers a project picker and a create button.
-- [ ] Clicking an invoice number opens a show page carrying every action.
-- [ ] *View PDF* renders in the browser; *Download PDF* still downloads.
-- [ ] The draft form shows live hours and totals as the rate changes.
-- [ ] The word "Send" appears nowhere in the UI; the status reads *Issued*.
-- [ ] A draft's payment terms override the project default.
-- [ ] On a multi-person project, the under-billing banner appears.
-- [ ] A `sent` invoice created under 1.1.0 still renders identically in the list, the show page and the PDF.
+- [x] Full suite green: `./testing/run-plugin-tests.sh TimeInvoice` → **OK, 95 tests, 387 assertions** (87 planned + 8 template-render tests added during execution).
+- [x] `Settings → Invoices` is reachable from the admin sidebar without typing a URL.
+- [x] A project's sidebar offers both *Invoices* and *Invoice settings*.
+- [x] The top-level *Invoices* page offers a project picker and a create button.
+- [x] Clicking an invoice number opens a show page carrying every action.
+- [ ] *View PDF* renders in the browser; *Download PDF* still downloads. **(needs a human: header logic unit-tested, browser behaviour not)**
+- [ ] The draft form shows live hours and totals as the rate changes. **(needs a human: endpoint + region unit-tested, AJAX wiring not)**
+- [x] The word "Send" appears nowhere in the UI; the status reads *Issued*.
+- [x] A draft's payment terms override the project default.
+- [x] On a multi-person project, the under-billing banner appears.
+- [ ] A `sent` invoice created under 1.1.0 still renders identically in the list, the show page and the PDF. **(needs a human: no 1.1.0 fixture data available here)**
 
 ## Deliberately not in this release
 
