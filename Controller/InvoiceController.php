@@ -328,6 +328,16 @@ class InvoiceController extends BaseController
         return $rec;
     }
 
+    /**
+     * Content-Disposition for the PDF response. `inline` lets the browser's own
+     * viewer render the invoice instead of forcing a download — the show page's
+     * "View PDF" action. Pure seam so the choice is unit-testable without HTTP.
+     */
+    protected function contentDisposition(bool $inline, string $name): string
+    {
+        return ($inline ? 'inline' : 'attachment') . '; filename="' . $name . '"';
+    }
+
     public function pdf(): void
     {
         $userId = $this->userSession->getId();
@@ -345,9 +355,11 @@ class InvoiceController extends BaseController
         $bytes = $this->invoicePdf->render($snap);
         $name = ($snap['number'] ?? 'draft') . '.pdf';
 
+        $inline = $this->request->getIntegerParam('inline') === 1;
+
         $this->response->withoutCache();
         $this->response->withContentType('application/pdf');
-        $this->response->withHeader('Content-Disposition', 'attachment; filename="' . $name . '"');
+        $this->response->withHeader('Content-Disposition', $this->contentDisposition($inline, $name));
         $this->response->withBody($bytes);
         $this->response->send();
     }

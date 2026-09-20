@@ -262,4 +262,14 @@ class InvoiceControllerTest extends Base
         $this->assertSame('sent', $sentSnap['status']);
         $this->assertNotNull($sentSnap['number'], 'an issued invoice carries its frozen number');
     }
+
+    public function testContentDispositionSwitchesOnInlineFlag(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'contentDisposition');
+        $m->setAccessible(true);
+        $this->assertSame('attachment; filename="INV-2026-001.pdf"', $m->invoke($c, false, 'INV-2026-001.pdf'));
+        $this->assertSame('inline; filename="INV-2026-001.pdf"', $m->invoke($c, true, 'INV-2026-001.pdf'));
+        $this->assertSame('inline; filename="draft.pdf"', $m->invoke($c, true, 'draft.pdf'));
+    }
 }
