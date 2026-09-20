@@ -37,6 +37,56 @@ class InvoiceController extends BaseController
         return $rows;
     }
 
+    /**
+     * TimeInvoice bills only the requesting user's hours: report() is called with
+     * six positional arguments, so its $subjectUserIds/$allUsers default to
+     * self-only. Until 1.3.0 ships the "Bill hours for" control, warn rather than
+     * under-bill silently.
+     *
+     * A non-manager cannot see other people's hours (TimeReport gates this), so
+     * they get a generic warning — and only on a genuinely multi-person project,
+     * otherwise the banner would be permanently on.
+     *
+     * @return array{visible:bool,specific:bool,people:int,hours:float}
+     */
+    protected function unbilledParticipants(int $projectId, string $start, string $end, int $userId): array
+    {
+        $silent = ['visible' => false, 'specific' => false, 'people' => 0, 'hours' => 0.0];
+
+        if (! $this->hasTimeReport()) {
+            return $silent;
+        }
+        $model = $this->timeReportModel;
+        if (! method_exists($model, 'participants') || ! method_exists($model, 'canReportOnOthers')) {
+            return $silent;
+        }
+
+        try {
+            if (! $model->canReportOnOthers($projectId, $userId)) {
+                $members = $this->projectUserRoleModel->getAssignableUsers($projectId);
+                return count($members) > 1
+                    ? ['visible' => true, 'specific' => false, 'people' => 0, 'hours' => 0.0]
+                    : $silent;
+            }
+
+            $all = $model->participants($projectId, $start, $end, $userId);
+        } catch (\Throwable $e) {
+            return $silent;
+        }
+
+        unset($all[$userId]);
+        if ($all === []) {
+            return $silent;
+        }
+
+        return [
+            'visible'  => true,
+            'specific' => true,
+            'people'   => count($all),
+            'hours'    => round((float) array_sum(array_column($all, 'hours')), 2),
+        ];
+    }
+
     protected function aiRegistry(): ?object
     {
         $cls = '\\Kanboard\\Plugin\\AiConnector\\Model\\ProviderRegistry';
@@ -137,6 +187,12 @@ class InvoiceController extends BaseController
             'invoice'    => $snap,
             'status'     => (string) ($record['status'] ?? 'draft'),
             'invoice_id' => $id,
+            'unbilled'   => $this->unbilledParticipants(
+                $projectId,
+                (string) ($snap['range']['start'] ?? date('Y-m-01')),
+                (string) ($snap['range']['end'] ?? date('Y-m-d')),
+                $userId
+            ),
         ]));
     }
 
@@ -192,6 +248,12 @@ class InvoiceController extends BaseController
             'ai_ready'           => $this->aiReady(),
             'ai_profiles'        => $this->aiProfiles(),
             'ai_default_profile' => $this->aiDefaultProfile(),
+            'unbilled'           => $this->unbilledParticipants(
+                $projectId,
+                (string) $values['start_date'],
+                (string) $values['end_date'],
+                $userId
+            ),
         ]));
     }
 

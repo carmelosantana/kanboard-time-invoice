@@ -357,4 +357,69 @@ class InvoiceControllerTest extends Base
         $this->assertSame(0, $p['line_count']);
         $this->assertSame('$', $p['symbol'], 'missing currency falls back to $');
     }
+
+    public function testUnbilledParticipantsReportsOthersForAManager(): void
+    {
+        $this->container['timeReportModel'] = fn ($x) => new class {
+            public function canReportOnOthers($pid, $uid) { return true; }
+            public function participants($pid, $s, $e, $uid) {
+                return [
+                    1 => ['name' => 'Me', 'hours' => 10.0],
+                    2 => ['name' => 'Other', 'hours' => 14.0],
+                    3 => ['name' => 'Third', 'hours' => 8.5],
+                ];
+            }
+        };
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'unbilledParticipants');
+        $m->setAccessible(true);
+        $r = $m->invoke($c, 5, '2026-08-01', '2026-08-31', 1);
+
+        $this->assertTrue($r['visible']);
+        $this->assertTrue($r['specific']);
+        $this->assertSame(2, $r['people'], 'self is excluded from the unbilled count');
+        $this->assertSame(22.5, $r['hours']);
+    }
+
+    public function testUnbilledParticipantsSilentWhenBillingIsAlreadyComplete(): void
+    {
+        $this->container['timeReportModel'] = fn ($x) => new class {
+            public function canReportOnOthers($pid, $uid) { return true; }
+            public function participants($pid, $s, $e, $uid) { return [1 => ['name' => 'Me', 'hours' => 10.0]]; }
+        };
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'unbilledParticipants');
+        $m->setAccessible(true);
+        $this->assertFalse($m->invoke($c, 5, '2026-08-01', '2026-08-31', 1)['visible'], 'solo biller -> no banner');
+    }
+
+    public function testUnbilledParticipantsIsGenericForANonManager(): void
+    {
+        $this->container['timeReportModel'] = fn ($x) => new class {
+            public function canReportOnOthers($pid, $uid) { return false; }
+            public function participants($pid, $s, $e, $uid) { return [1 => ['name' => 'Me', 'hours' => 10.0]]; }
+        };
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
+        // addUser() returns false for a user id that does not exist, which would
+        // leave the project memberless and pass this test for the wrong reason.
+        $um = new \Kanboard\Model\UserModel($this->container);
+        $this->assertTrue($this->container['projectUserRoleModel']->addUser($pid, 1, \Kanboard\Core\Security\Role::PROJECT_MANAGER));
+        $this->assertTrue($this->container['projectUserRoleModel']->addUser($pid, $um->create(['username' => 'other', 'name' => 'Other']), \Kanboard\Core\Security\Role::PROJECT_MEMBER));
+
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'unbilledParticipants');
+        $m->setAccessible(true);
+        $r = $m->invoke($c, $pid, '2026-08-01', '2026-08-31', 1);
+
+        $this->assertTrue($r['visible'], 'a non-manager on a multi-person project gets the generic warning');
+        $this->assertFalse($r['specific'], 'they may not see names or hours');
+    }
+
+    public function testUnbilledParticipantsSilentWithoutTimeReport(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'unbilledParticipants');
+        $m->setAccessible(true);
+        $this->assertFalse($m->invoke($c, 5, '2026-08-01', '2026-08-31', 1)['visible']);
+    }
 }

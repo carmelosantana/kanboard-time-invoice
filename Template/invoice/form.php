@@ -1,4 +1,5 @@
 <div class="page-header"><h2><?= t('Invoice for %s', $project['name']) ?></h2></div>
+<?= $this->render('TimeInvoice:invoice/_banner', array('unbilled' => $unbilled)) ?>
 
 <form method="post" action="<?= $this->url->href('InvoiceController', 'saveDraft', array('plugin' => 'TimeInvoice')) ?>" autocomplete="off">
     <?= $this->form->csrf() ?>

@@ -3,6 +3,8 @@
     <h2><?= $this->text->e($invoice['number'] ?? t('(draft)')) ?> — <?= $this->text->e($project['name']) ?></h2>
 </div>
 
+<?= $this->render('TimeInvoice:invoice/_banner', array('unbilled' => $unbilled)) ?>
+
 <p>
     <span class="<?= $this->helper->invoice->statusClass($status) ?>"><?= $this->helper->invoice->statusLabel($status) ?></span>
     &nbsp;·&nbsp; <?= t('Issued') ?>: <?= $this->text->e($invoice['issue_date'] ?? '') ?>
