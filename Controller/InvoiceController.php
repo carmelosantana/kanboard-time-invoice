@@ -204,7 +204,6 @@ class InvoiceController extends BaseController
             'rate'        => (float) ($v['rate'] ?? 0),
             'tax_enabled' => ! empty($v['tax_enabled']),
             'tax_rate'    => (float) ($v['tax_rate'] ?? 0),
-            'currency'    => ['code' => $v['currency_code'] ?? 'USD', 'symbol' => $v['currency_symbol'] ?? '$'],
             'client'      => ['name' => $v['client_name'] ?? '', 'address' => $v['client_address'] ?? '', 'email' => $v['client_email'] ?? ''],
             'terms'       => (string) ($v['terms'] ?? ''),
             'terms_days'  => (int) ($v['terms_days'] ?? 30),
@@ -240,10 +239,12 @@ class InvoiceController extends BaseController
     }
 
     /**
-     * Assemble the immutable snapshot frozen onto a sent invoice. Currency and
-     * terms_days come from the layered defaults (global < project), NOT the
-     * draft's hardcoded values, since the form does not expose those fields —
-     * this makes a user's GLOBAL settings (e.g. GBP / Net-15) actually apply.
+     * Assemble the immutable snapshot frozen onto an issued invoice.
+     *
+     * Currency is project-level only (global < project): billing one client in
+     * two currencies is not a real scenario, and the form does not offer it.
+     * terms_days layers global < project < draft, because a rush Net-15 on a
+     * single invoice IS a real scenario.
      */
     protected function freezeSnapshot(array $draft, int $userId): array
     {
@@ -254,7 +255,10 @@ class InvoiceController extends BaseController
         $global  = $this->globalDefaults();
         $project = $this->projectDefaults($projectId);
         $currency  = $project['currency'] ?? ($global['currency'] ?? ['code' => 'USD', 'symbol' => '$']);
-        $termsDays = (int) ($project['terms_days'] ?? ($global['terms_days'] ?? 30));
+        $termsDays = (int) ($draft['terms_days']
+            ?? $project['terms_days']
+            ?? $global['terms_days']
+            ?? 30);
 
         $report = $this->timeReportModel->report(
             $projectId,

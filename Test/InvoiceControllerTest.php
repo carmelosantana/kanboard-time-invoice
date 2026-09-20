@@ -272,4 +272,52 @@ class InvoiceControllerTest extends Base
         $this->assertSame('inline; filename="INV-2026-001.pdf"', $m->invoke($c, true, 'INV-2026-001.pdf'));
         $this->assertSame('inline; filename="draft.pdf"', $m->invoke($c, true, 'draft.pdf'));
     }
+
+    public function testDraftTermsDaysOverridesProjectAndGlobal(): void
+    {
+        $this->container['timeReportModel'] = fn ($x) => new class {
+            public function report($pid, $s, $e, $g, $d, $u) {
+                return ['breakdown' => [['key' => '1', 'label' => '#1', 'hours' => 1.0, 'task_count' => 1]]];
+            }
+        };
+        $this->container['configModel']->save([
+            'timeinvoice_terms_days' => '30',
+            'timeinvoice_currency'   => json_encode(['code' => 'USD', 'symbol' => '$']),
+        ]);
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
+        $this->container['projectMetadataModel']->save($pid, [
+            'timeinvoice:defaults' => json_encode([
+                'terms_days' => 20,
+                'currency'   => ['code' => 'GBP', 'symbol' => 'GBP'],
+            ]),
+        ]);
+
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'freezeSnapshot');
+        $m->setAccessible(true);
+
+        $base = [
+            'project_id' => $pid,
+            'range' => ['start' => '2026-08-01', 'end' => '2026-08-31'],
+            'granularity' => 'task', 'rate' => 100.0, 'issue_date' => '2026-08-01',
+        ];
+
+        $snap = $m->invoke($c, $base, 1);
+        $this->assertSame('2026-08-21', $snap['due_date'], 'project terms_days = 20');
+        $this->assertSame('GBP', $snap['currency']['code'], 'currency stays project-level');
+
+        $snap2 = $m->invoke($c, array_merge($base, ['terms_days' => 7]), 1);
+        $this->assertSame('2026-08-08', $snap2['due_date'], 'draft terms_days must override the project default');
+        $this->assertSame('GBP', $snap2['currency']['code'], 'a draft must NOT be able to change currency');
+    }
+
+    public function testBuildDraftFromRequestNoLongerEmitsDeadCurrencyKey(): void
+    {
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'buildDraftFromRequest');
+        $m->setAccessible(true);
+        $draft = $m->invoke($c, ['start_date' => '2026-08-01', 'end_date' => '2026-08-31', 'rate' => '100', 'terms_days' => '14']);
+        $this->assertArrayNotHasKey('currency', $draft, 'the form never posts currency; storing USD/$ on every draft was a lie');
+        $this->assertSame(14, $draft['terms_days']);
+    }
 }

@@ -20,6 +20,10 @@
     <?= $this->form->label(t('Tax rate %%'), 'tax_rate') ?>
     <?= $this->form->number('tax_rate', $values, array(), array('step' => '0.001')) ?>
 
+    <?= $this->form->label(t('Payment terms (days)'), 'terms_days') ?>
+    <?= $this->form->number('terms_days', $values) ?>
+    <p class="form-help"><?= t('Overrides the project default for this invoice only.') ?></p>
+
     <h3><?= t('Client') ?></h3>
     <p class="form-help"><?= t('Inherited from the project. Changes here apply to this invoice only.') ?></p>
     <?= $this->form->label(t('Client name'), 'client_name') ?>
