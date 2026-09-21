@@ -169,4 +169,54 @@ class TemplateRenderTest extends Base
         $this->assertStringContainsString('Invoices', $html);
         $this->assertStringContainsString('Invoice settings', $html);
     }
+
+    /**
+     * The live-totals handler recalculates only when a changed input's name
+     * appears in data-recalc-fields. If the form renders a field under a
+     * different name, the strip silently never updates — a failure no unit test
+     * of the endpoint can see. Pins the contract between template and JS.
+     */
+    public function testEveryRecalcFieldNameExistsInTheRenderedForm(): void
+    {
+        $html = $this->render('TimeInvoice:invoice/form', [
+            'project'  => ['id' => 1, 'name' => 'P'],
+            'values'   => [
+                'project_id' => 1, 'id' => '', 'start_date' => '2026-08-01', 'end_date' => '2026-08-31',
+                'granularity' => 'task', 'rate' => 150.0, 'tax_enabled' => false, 'tax_rate' => 0.0,
+                'terms_days' => 30, 'notes' => '', 'client' => ['name' => '', 'address' => '', 'email' => ''],
+            ],
+            'ai_ready' => false, 'ai_profiles' => [], 'ai_default_profile' => '',
+            'unbilled' => $this->silent(),
+        ]);
+
+        $this->assertMatchesRegularExpression('/data-recalc-fields="([^"]+)"/', $html);
+        preg_match('/data-recalc-fields="([^"]+)"/', $html, $m);
+        $fields = explode(',', $m[1]);
+        $this->assertNotEmpty($fields);
+
+        preg_match_all('/name="([^"\[]+)/', $html, $names);
+        $rendered = array_unique($names[1]);
+
+        foreach ($fields as $field) {
+            $this->assertContains($field, $rendered, "data-recalc-fields lists '$field' but the form renders no input with that name — live totals would never fire for it");
+        }
+    }
+
+    /** The AJAX posts $form.serialize(), so project_id must be in the form. */
+    public function testFormCarriesProjectIdAndCsrfForTheTotalsPost(): void
+    {
+        $html = $this->render('TimeInvoice:invoice/form', [
+            'project'  => ['id' => 7, 'name' => 'P'],
+            'values'   => [
+                'project_id' => 7, 'id' => '', 'start_date' => '2026-08-01', 'end_date' => '2026-08-31',
+                'granularity' => 'task', 'rate' => 150.0, 'tax_enabled' => false, 'tax_rate' => 0.0,
+                'terms_days' => 30, 'notes' => '', 'client' => ['name' => '', 'address' => '', 'email' => ''],
+            ],
+            'ai_ready' => false, 'ai_profiles' => [], 'ai_default_profile' => '',
+            'unbilled' => $this->silent(),
+        ]);
+
+        $this->assertStringContainsString('name="project_id"', $html, 'previewTotals() reads project_id from the POST body');
+        $this->assertStringContainsString('name="csrf_token"', $html, 'previewTotals() calls checkCSRFForm()');
+    }
 }
