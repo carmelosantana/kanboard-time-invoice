@@ -212,8 +212,7 @@ class InvoiceController extends BaseController
 
     protected function projectDefaults(int $projectId): array
     {
-        $raw = $this->projectMetadataModel->get($projectId, 'timeinvoice:defaults', '{}');
-        return json_decode($raw ?: '{}', true) ?: [];
+        return (new \Kanboard\Plugin\TimeInvoice\Model\ProjectSettingsModel($this->container))->get($projectId);
     }
 
     public function form(): void

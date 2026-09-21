@@ -21,8 +21,6 @@ use Kanboard\Core\Security\Role;
  */
 class ProjectSettingsController extends BaseController
 {
-    private const KEY = 'timeinvoice:defaults';
-
     protected function canManage(int $projectId, int $userId): bool
     {
         if ($this->userSession->isAdmin()) {
@@ -31,11 +29,15 @@ class ProjectSettingsController extends BaseController
         return $this->projectUserRoleModel->getUserRole($projectId, $userId) === Role::PROJECT_MANAGER;
     }
 
-    /** @return array the decoded defaults blob, or [] when unset */
+    protected function settingsModel(): \Kanboard\Plugin\TimeInvoice\Model\ProjectSettingsModel
+    {
+        return new \Kanboard\Plugin\TimeInvoice\Model\ProjectSettingsModel($this->container);
+    }
+
+    /** @return array the decoded defaults, or [] when unset */
     protected function currentDefaults(int $projectId): array
     {
-        $raw = $this->projectMetadataModel->get($projectId, self::KEY, '{}');
-        return json_decode($raw ?: '{}', true) ?: [];
+        return $this->settingsModel()->get($projectId);
     }
 
     /** Map request values → the stored blob. Pure enough to unit-test. */
@@ -80,9 +82,7 @@ class ProjectSettingsController extends BaseController
             throw new AccessForbiddenException();
         }
 
-        $this->projectMetadataModel->save($projectId, [
-            self::KEY => json_encode($this->buildDefaults($values), JSON_PRESERVE_ZERO_FRACTION),
-        ]);
+        $this->settingsModel()->save($projectId, $this->buildDefaults($values));
         $this->flash->success(t('Invoice settings saved.'));
         $this->response->redirect($this->helper->url->to('ProjectSettingsController', 'show', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
     }

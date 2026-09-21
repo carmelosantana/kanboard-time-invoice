@@ -1,12 +1,16 @@
 <?php
 require_once 'tests/units/Base.php';
 use KanboardTests\units\Base;
+require_once __DIR__ . '/InvoiceSchemaHelper.php';
 use Kanboard\Plugin\TimeInvoice\Controller\InvoiceController;
 
 class InvoiceControllerTest extends Base
 {
+    use InvoiceSchemaHelper;
+
     public function testDependencyGateFalseWithoutTimeReport(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $ref = new ReflectionMethod($c, 'hasTimeReport');
         $ref->setAccessible(true);
@@ -17,6 +21,7 @@ class InvoiceControllerTest extends Base
 
     public function testGlobalDefaultsDecodeFromConfig(): void
     {
+        $this->createInvoiceSchema();
         $this->container['configModel']->save(['timeinvoice_business' => json_encode(['name' => 'Me'])]);
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'globalDefaults');
@@ -27,6 +32,7 @@ class InvoiceControllerTest extends Base
 
     public function testFreezeSnapshotBuildsLineItemsAndTotals(): void
     {
+        $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new class {
             public function report($pid, $s, $e, $g, $d, $u) {
                 return ['breakdown' => [['key' => '1', 'label' => '#1 Task', 'hours' => 10.0, 'task_count' => 1]]];
@@ -51,6 +57,7 @@ class InvoiceControllerTest extends Base
 
     public function testAiReadyFalseWithoutAiConnector(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'aiReady');
         $m->setAccessible(true);
@@ -59,6 +66,7 @@ class InvoiceControllerTest extends Base
 
     public function testAiProfilesEmptyWithoutAiConnector(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'aiProfiles');
         $m->setAccessible(true);
@@ -70,6 +78,7 @@ class InvoiceControllerTest extends Base
 
     public function testPdfPreviewForDraftRendersBytes(): void
     {
+        $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new class {
             public function report($pid, $s, $e, $g, $d, $u) {
                 return ['breakdown' => [['key' => '1', 'label' => '#1', 'hours' => 2.0, 'task_count' => 1]]];
@@ -91,6 +100,7 @@ class InvoiceControllerTest extends Base
 
     public function testCoverNoteContextMapsRequestValues(): void
     {
+        $this->createInvoiceSchema();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Acme']);
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'coverNoteContext');
@@ -113,6 +123,7 @@ class InvoiceControllerTest extends Base
 
     public function testCoverNoteContextClampsBadGranularityAndDates(): void
     {
+        $this->createInvoiceSchema();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'coverNoteContext');
@@ -132,6 +143,7 @@ class InvoiceControllerTest extends Base
      */
     public function testRequestProjectIdReadsFromPostBody(): void
     {
+        $this->createInvoiceSchema();
         $csrf = $this->container['token']->getCSRFToken();
         // GET (3rd arg) is empty; project_id lives ONLY in the POST body (4th arg).
         $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
@@ -152,6 +164,7 @@ class InvoiceControllerTest extends Base
 
     public function testAccessibleProjectsReturnsIdNameMapForGuardedIdsOnly(): void
     {
+        $this->createInvoiceSchema();
         $this->loginAsAdmin();
         $pm = new \Kanboard\Model\ProjectModel($this->container);
         $a = $pm->create(['name' => 'Zulu Project']);
@@ -182,6 +195,7 @@ class InvoiceControllerTest extends Base
 
     public function testAccessibleProjectsEmptyWhenNoProjects(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'accessibleProjects');
         $m->setAccessible(true);
@@ -196,12 +210,13 @@ class InvoiceControllerTest extends Base
 
     public function testFormValuesInheritProjectClientAndAreOverriddenByDraft(): void
     {
+        $this->createInvoiceSchema();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
-        $this->container['projectMetadataModel']->save($pid, [
-            'timeinvoice:defaults' => json_encode([
-                'rate'   => 165.0,
-                'client' => ['name' => 'Acme Inc', 'email' => 'ap@acme.example'],
-            ]),
+        // Project defaults live in timeinvoice_project_settings now, not in the
+        // VARCHAR(255) metadata column.
+        (new \Kanboard\Plugin\TimeInvoice\Model\ProjectSettingsModel($this->container))->save($pid, [
+            'rate'   => 165.0,
+            'client' => ['name' => 'Acme Inc', 'email' => 'ap@acme.example'],
         ]);
 
         $c = new InvoiceController($this->container);
@@ -227,12 +242,14 @@ class InvoiceControllerTest extends Base
 
     public function testShowRouteRegistered(): void
     {
+        $this->createInvoiceSchema();
         $src = file_get_contents(dirname(__DIR__) . '/Plugin.php');
         $this->assertStringContainsString("'timeinvoice/show'", $src);
     }
 
     public function testSnapshotForPdfDrivesShowForDraftAndFrozenForSent(): void
     {
+        $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new class {
             public function report($pid, $s, $e, $g, $d, $u) {
                 return ['breakdown' => [['key' => '1', 'label' => '#1 Task', 'hours' => 4.0, 'task_count' => 1]]];
@@ -271,6 +288,7 @@ class InvoiceControllerTest extends Base
      */
     public function testPdfHeadersForceTransferOnDownloadAndRenderOnView(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'pdfHeaders');
         $m->setAccessible(true);
@@ -290,6 +308,7 @@ class InvoiceControllerTest extends Base
 
     public function testDraftTermsDaysOverridesProjectAndGlobal(): void
     {
+        $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new class {
             public function report($pid, $s, $e, $g, $d, $u) {
                 return ['breakdown' => [['key' => '1', 'label' => '#1', 'hours' => 1.0, 'task_count' => 1]]];
@@ -300,11 +319,9 @@ class InvoiceControllerTest extends Base
             'timeinvoice_currency'   => json_encode(['code' => 'USD', 'symbol' => '$']),
         ]);
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
-        $this->container['projectMetadataModel']->save($pid, [
-            'timeinvoice:defaults' => json_encode([
-                'terms_days' => 20,
-                'currency'   => ['code' => 'GBP', 'symbol' => 'GBP'],
-            ]),
+        (new \Kanboard\Plugin\TimeInvoice\Model\ProjectSettingsModel($this->container))->save($pid, [
+            'terms_days' => 20,
+            'currency'   => ['code' => 'GBP', 'symbol' => 'GBP'],
         ]);
 
         $c = new InvoiceController($this->container);
@@ -328,6 +345,7 @@ class InvoiceControllerTest extends Base
 
     public function testBuildDraftFromRequestNoLongerEmitsDeadCurrencyKey(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'buildDraftFromRequest');
         $m->setAccessible(true);
@@ -338,6 +356,7 @@ class InvoiceControllerTest extends Base
 
     public function testTotalsPayloadSummarisesASnapshot(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'totalsPayload');
         $m->setAccessible(true);
@@ -364,6 +383,7 @@ class InvoiceControllerTest extends Base
 
     public function testTotalsPayloadHandlesEmptyRange(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'totalsPayload');
         $m->setAccessible(true);
@@ -375,6 +395,7 @@ class InvoiceControllerTest extends Base
 
     public function testUnbilledParticipantsReportsOthersForAManager(): void
     {
+        $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new class {
             public function canReportOnOthers($pid, $uid) { return true; }
             public function participants($pid, $s, $e, $uid) {
@@ -398,6 +419,7 @@ class InvoiceControllerTest extends Base
 
     public function testUnbilledParticipantsSilentWhenBillingIsAlreadyComplete(): void
     {
+        $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new class {
             public function canReportOnOthers($pid, $uid) { return true; }
             public function participants($pid, $s, $e, $uid) { return [1 => ['name' => 'Me', 'hours' => 10.0]]; }
@@ -410,6 +432,7 @@ class InvoiceControllerTest extends Base
 
     public function testUnbilledParticipantsIsGenericForANonManager(): void
     {
+        $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new class {
             public function canReportOnOthers($pid, $uid) { return false; }
             public function participants($pid, $s, $e, $uid) { return [1 => ['name' => 'Me', 'hours' => 10.0]]; }
@@ -432,6 +455,7 @@ class InvoiceControllerTest extends Base
 
     public function testUnbilledParticipantsSilentWithoutTimeReport(): void
     {
+        $this->createInvoiceSchema();
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'unbilledParticipants');
         $m->setAccessible(true);

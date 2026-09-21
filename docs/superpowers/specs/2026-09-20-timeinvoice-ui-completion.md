@@ -91,6 +91,32 @@ All decisions below are settled. The ID is the question number from the design s
 
 ---
 
+## Addendum — 2026-09-21: storage was broken on MySQL and Postgres
+
+A user reported `SQLSTATE[22001] ... Data too long for column 'value'`.
+
+**Cause.** Invoices were stored as a single JSON blob in
+`project_has_metadata.value`, which is `VARCHAR(255)` on MySQL
+(`mysql.sql:340`) and Postgres (`Postgres.php:500`). Measured payloads: a draft
+with client details 372 chars, project settings 286, an issued invoice with 8
+line items **1,077**. So the plugin worked only on SQLite, which ignores
+declared VARCHAR lengths — and which is what the test harness uses, so 99 green
+tests never saw it. Outside MySQL strict mode there is no error at all and the
+row truncates silently, corrupting a frozen invoice.
+
+Invoice storage was wrong from 1.0.0; the project-settings blob was added in
+1.2.0 with the same flaw.
+
+**Fixed in 1.2.2.** Both moved to the plugin's own tables
+(`timeinvoice_invoices.record`, `timeinvoice_project_settings.settings`) via a
+`Schema/` migration, following the pattern Agents and SchedulerPlugin already
+use. This corrects the "no DB migration" line below: that convention holds for
+small values, not for records that cannot fit 255 bytes.
+
+Existing rows are **copied, not moved**, so a downgrade to 1.2.1 still finds
+its data. Rows already truncated by the bug are skipped rather than failing the
+migration, which would otherwise make the plugin impossible to enable.
+
 ## Non-goals
 
 - **Email of any kind.** Closed by Q1. `client_email` remains a field on the invoice and is printed on the PDF; it drives nothing.

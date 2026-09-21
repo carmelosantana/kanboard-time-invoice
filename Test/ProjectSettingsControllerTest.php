@@ -1,13 +1,17 @@
 <?php
 require_once 'tests/units/Base.php';
 use KanboardTests\units\Base;
+require_once __DIR__ . '/InvoiceSchemaHelper.php';
 use Kanboard\Plugin\TimeInvoice\Controller\ProjectSettingsController;
 use Kanboard\Core\Security\Role;
 
 class ProjectSettingsControllerTest extends Base
 {
+    use InvoiceSchemaHelper;
+
     public function testCurrentDefaultsEmptyForFreshProject(): void
     {
+        $this->createInvoiceSchema();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
         $c = new ProjectSettingsController($this->container);
         $m = new ReflectionMethod($c, 'currentDefaults');
@@ -17,6 +21,7 @@ class ProjectSettingsControllerTest extends Base
 
     public function testSaveWritesDefaultsReadableByInvoiceController(): void
     {
+        $this->createInvoiceSchema();
         $this->loginAsAdmin();
         $this->silenceRedirects();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Acme Retainer']);
@@ -53,6 +58,7 @@ class ProjectSettingsControllerTest extends Base
 
     public function testSaveIsBlockedForNonManager(): void
     {
+        $this->createInvoiceSchema();
         $_SESSION['user'] = ['id' => 2, 'role' => Role::APP_USER];
         $this->silenceRedirects();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
@@ -76,6 +82,7 @@ class ProjectSettingsControllerTest extends Base
 
     public function testCanManageAllowsAdminAndProjectManagerButNotAMember(): void
     {
+        $this->createInvoiceSchema();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'P']);
         // addUser() returns false for a user id that does not exist, which would
         // silently leave the project memberless — create real users first.
@@ -101,6 +108,7 @@ class ProjectSettingsControllerTest extends Base
 
     public function testBuildDefaultsCoercesTypesAndFillsBlanks(): void
     {
+        $this->createInvoiceSchema();
         $c = new ProjectSettingsController($this->container);
         $m = new ReflectionMethod($c, 'buildDefaults');
         $m->setAccessible(true);

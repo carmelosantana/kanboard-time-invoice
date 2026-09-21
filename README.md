@@ -31,6 +31,16 @@ attachment. Download or view the PDF and send it however you normally do.
 > other people have logged time in the range, the invoice form warns you. Billing
 > several people, each at their own rate, arrives in 1.3.0.
 
+## Storage
+
+Invoices live in the plugin's own `timeinvoice_invoices` and
+`timeinvoice_project_settings` tables, created automatically on enable or
+upgrade. Before 1.3.0 they were stored in Kanboard's `project_has_metadata`,
+whose `value` column is `VARCHAR(255)` on MySQL and Postgres — far too small
+for an invoice, which failed with `SQLSTATE[22001] Data too long` or truncated
+silently. Existing records are copied over on upgrade, and the old rows are
+left in place so a downgrade still finds them.
+
 ## Requires TimeReport
 
 TimeInvoice depends on the [TimeReport](https://github.com/carmelosantana/kanboard-time-report) plugin (>= 1.1.0), which supplies the hours aggregate that invoice line items are built from. Install and enable TimeReport first.

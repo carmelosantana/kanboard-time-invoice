@@ -1,11 +1,14 @@
 <?php
 require_once 'tests/units/Base.php';
 use KanboardTests\units\Base;
+require_once __DIR__ . '/InvoiceSchemaHelper.php';
 use Kanboard\Plugin\TimeInvoice\Model\InvoiceModel;
 use Kanboard\Model\ProjectModel;
 
 class InvoiceModelTest extends Base
 {
+    use InvoiceSchemaHelper;
+
     private function seedProject(): int
     {
         $p = new ProjectModel($this->container);
@@ -14,6 +17,7 @@ class InvoiceModelTest extends Base
 
     public function testCreateLoadListDraft(): void
     {
+        $this->createInvoiceSchema();
         $pid = $this->seedProject();
         $m = new InvoiceModel($this->container);
         $id = $m->createDraft($pid, 1, ['range' => ['start' => '2026-08-01', 'end' => '2026-08-31'], 'rate' => 150.0]);
@@ -31,6 +35,7 @@ class InvoiceModelTest extends Base
 
     public function testSendAssignsNumberFreezesAndCountsOutstanding(): void
     {
+        $this->createInvoiceSchema();
         $pid = $this->seedProject();
         $m = new InvoiceModel($this->container);
         $id = $m->createDraft($pid, 1, ['range' => ['start' => '2026-08-01', 'end' => '2026-08-31']]);
@@ -50,6 +55,7 @@ class InvoiceModelTest extends Base
 
     public function testNumbersAreGapFreeAcrossTwoSends(): void
     {
+        $this->createInvoiceSchema();
         $pid = $this->seedProject();
         $m = new InvoiceModel($this->container);
         $a = $m->createDraft($pid, 1, []);
@@ -61,6 +67,7 @@ class InvoiceModelTest extends Base
 
     public function testCreateDraftReusesProvidedId(): void
     {
+        $this->createInvoiceSchema();
         $pid = $this->seedProject();
         $m = new InvoiceModel($this->container);
         $id = $m->createDraft($pid, 1, ['rate' => 100.0]);
@@ -77,6 +84,7 @@ class InvoiceModelTest extends Base
 
     public function testListAllSpansProjects(): void
     {
+        $this->createInvoiceSchema();
         $p1 = $this->seedProject();
         $p2 = $this->seedProject();
         $m = new InvoiceModel($this->container);

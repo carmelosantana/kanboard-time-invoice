@@ -5,13 +5,27 @@ namespace Kanboard\Plugin\TimeInvoice\Model;
 use Kanboard\Core\Base;
 
 /**
- * Persistence + lifecycle for invoices. Records are JSON blobs in
- * project_has_metadata keyed timeinvoice:inv:<id>. The per-year counter and the
- * number format live in the settings table via ConfigModel. No DB migration.
+ * Persistence + lifecycle for invoices.
+ *
+ * Records live in the plugin's own `timeinvoice_invoices` table, whose `record`
+ * column is MEDIUMTEXT/TEXT. They used to be JSON blobs in
+ * `project_has_metadata`, but that column is VARCHAR(255) on MySQL and
+ * Postgres while an issued invoice serializes to roughly 1KB — every write
+ * failed with SQLSTATE[22001], or truncated silently outside MySQL strict
+ * mode. SQLite ignores declared VARCHAR lengths, which is the only reason the
+ * plugin ever appeared to work.
+ *
+ * `project_id`, `status` and `created_at` are promoted to real columns so
+ * listing and sorting happen in SQL; the full record stays as JSON so the
+ * frozen snapshot keeps its exact shape.
+ *
+ * The per-year counter and the number format still live in the settings table
+ * via ConfigModel — `settings.value` is mediumtext, so those are unaffected.
  */
 class InvoiceModel extends Base
 {
-    private const KEY_PREFIX      = 'timeinvoice:inv:';
+    public const TABLE = 'timeinvoice_invoices';
+
     private const CFG_COUNTER     = 'timeinvoice_counter';
     private const CFG_NUMBER_FMT  = 'timeinvoice_number_format';
     private const DEFAULT_FORMAT  = 'INV-{YYYY}-{seq}';
@@ -19,21 +33,30 @@ class InvoiceModel extends Base
     public function createDraft(int $projectId, int $userId, array $draft): string
     {
         $id = (! empty($draft['id']) && is_string($draft['id'])) ? $draft['id'] : $this->newId();
+        $existing = $this->load($projectId, $id);
+
         $record = array_merge($draft, [
             'id'         => $id,
             'project_id' => $projectId,
             'user_id'    => $userId,
             'status'     => 'draft',
-            'created_at' => date('Y-m-d H:i:s'),
+            // Preserve the original creation time when re-saving a draft, so
+            // the newest-first ordering does not jump on every edit.
+            'created_at' => $existing['created_at'] ?? date('Y-m-d H:i:s'),
         ]);
+
         $this->put($projectId, $id, $record);
         return $id;
     }
 
     public function load(int $projectId, string $id): ?array
     {
-        $raw = $this->projectMetadataModel->get($projectId, self::KEY_PREFIX . $id, '');
-        if ($raw === '' || $raw === null) {
+        $raw = $this->db->table(self::TABLE)
+            ->eq('project_id', $projectId)
+            ->eq('id', $id)
+            ->findOneColumn('record');
+
+        if ($raw === null || $raw === false || $raw === '') {
             return null;
         }
         $rec = json_decode($raw, true);
@@ -42,11 +65,12 @@ class InvoiceModel extends Base
 
     public function listByProject(int $projectId): array
     {
-        $rows = $this->db->table('project_has_metadata')
-            ->eq('project_id', $projectId)
-            ->like('name', self::KEY_PREFIX . '%')
-            ->findAll();
-        return $this->decodeRows($rows);
+        return $this->decodeRows(
+            $this->db->table(self::TABLE)
+                ->eq('project_id', $projectId)
+                ->desc('created_at')
+                ->findAll()
+        );
     }
 
     public function listAll(array $projectIds): array
@@ -54,11 +78,12 @@ class InvoiceModel extends Base
         if ($projectIds === []) {
             return [];
         }
-        $rows = $this->db->table('project_has_metadata')
-            ->in('project_id', array_map('intval', $projectIds))
-            ->like('name', self::KEY_PREFIX . '%')
-            ->findAll();
-        return $this->decodeRows($rows);
+        return $this->decodeRows(
+            $this->db->table(self::TABLE)
+                ->in('project_id', array_map('intval', $projectIds))
+                ->desc('created_at')
+                ->findAll()
+        );
     }
 
     public function send(int $projectId, string $id, array $frozenSnapshot): array
@@ -96,7 +121,7 @@ class InvoiceModel extends Base
 
     public function delete(int $projectId, string $id): void
     {
-        $this->projectMetadataModel->remove($projectId, self::KEY_PREFIX . $id);
+        $this->db->table(self::TABLE)->eq('project_id', $projectId)->eq('id', $id)->remove();
     }
 
     public function outstandingTotal(array $projectIds): float
@@ -110,9 +135,23 @@ class InvoiceModel extends Base
         return round($sum, 2);
     }
 
+    /** Insert or update the row for this invoice. */
     private function put(int $projectId, string $id, array $record): void
     {
-        $this->projectMetadataModel->save($projectId, [self::KEY_PREFIX . $id => json_encode($record, JSON_PRESERVE_ZERO_FRACTION)]);
+        $values = [
+            'project_id' => $projectId,
+            'status'     => (string) ($record['status'] ?? 'draft'),
+            'created_at' => (string) ($record['created_at'] ?? date('Y-m-d H:i:s')),
+            'record'     => json_encode($record, JSON_PRESERVE_ZERO_FRACTION),
+        ];
+
+        $exists = $this->db->table(self::TABLE)->eq('project_id', $projectId)->eq('id', $id)->exists();
+
+        if ($exists) {
+            $this->db->table(self::TABLE)->eq('project_id', $projectId)->eq('id', $id)->update($values);
+            return;
+        }
+        $this->db->table(self::TABLE)->insert($values + ['id' => $id]);
     }
 
     /** @return list<array> newest first */
@@ -120,11 +159,13 @@ class InvoiceModel extends Base
     {
         $out = [];
         foreach ($rows as $row) {
-            $rec = json_decode($row['value'], true);
+            $rec = json_decode($row['record'], true);
             if (is_array($rec)) {
                 $out[] = $rec;
             }
         }
+        // The SQL ordering handles the common case; this keeps the exact
+        // newest-first contract even when created_at values collide.
         usort($out, static fn ($a, $b) => strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')));
         return $out;
     }

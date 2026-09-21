@@ -10,6 +10,7 @@ class Plugin extends Base
     {
         $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
         $this->container['invoicePdf']   = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoicePdf($c);
+        $this->container['invoiceProjectSettingsModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\ProjectSettingsModel($c);
         $this->container['coverNoteGenerator'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\CoverNoteGenerator($c);
 
         $this->helper->register('invoice', \Kanboard\Plugin\TimeInvoice\Helper\InvoiceHelper::class);
@@ -54,7 +55,7 @@ class Plugin extends Base
 
     public function getPluginName(): string        { return 'TimeInvoice'; }
     public function getPluginAuthor(): string      { return 'Carmelo Santana'; }
-    public function getPluginVersion(): string     { return '1.2.1'; }
+    public function getPluginVersion(): string     { return '1.2.2'; }
     public function getPluginLicense(): string     { return 'MIT'; }
     public function getPluginHomepage(): string    { return 'https://github.com/carmelosantana/kanboard-time-invoice'; }
     public function getCompatibleVersion(): string { return '>=1.2.47'; }
