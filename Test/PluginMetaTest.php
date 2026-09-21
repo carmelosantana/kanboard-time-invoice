@@ -9,9 +9,14 @@ class PluginMetaTest extends Base
         return json_decode(file_get_contents(dirname(__DIR__) . '/plugin.json'), true);
     }
 
-    public function testVersionIs110(): void
+    /**
+     * Release-agnostic on purpose: pinning a literal here meant renaming the
+     * test every release. PluginTest::testVersionMatchesJson already asserts
+     * plugin.json and Plugin::getPluginVersion() agree; this pins the shape.
+     */
+    public function testVersionIsSemver(): void
     {
-        $this->assertSame('1.1.0', $this->json()['version']);
+        $this->assertMatchesRegularExpression('/^\d+\.\d+\.\d+$/', $this->json()['version']);
     }
 
     public function testNameAndCompat(): void

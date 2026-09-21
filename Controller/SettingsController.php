@@ -3,6 +3,7 @@
 namespace Kanboard\Plugin\TimeInvoice\Controller;
 
 use Kanboard\Controller\BaseController;
+use Kanboard\Core\Controller\AccessForbiddenException;
 
 class SettingsController extends BaseController
 {
@@ -25,11 +26,10 @@ class SettingsController extends BaseController
     public function show(): void
     {
         if (! $this->userSession->isAdmin()) {
-            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', array('plugin' => 'TimeInvoice')));
-            return;
+            throw new AccessForbiddenException();
         }
-        $this->response->html($this->helper->layout->app('TimeInvoice:invoice/settings', [
-            'title'  => t('Invoice settings'),
+        $this->response->html($this->helper->layout->config('TimeInvoice:invoice/settings', [
+            'title'  => t('Settings') . ' &gt; ' . t('Invoices'),
             'values' => $this->currentSettings(),
         ]));
     }
@@ -37,8 +37,7 @@ class SettingsController extends BaseController
     public function save(): void
     {
         if (! $this->userSession->isAdmin()) {
-            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', array('plugin' => 'TimeInvoice')));
-            return;
+            throw new AccessForbiddenException();
         }
         $this->checkCSRFForm();
         $v = $this->request->getValues();

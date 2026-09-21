@@ -17,6 +17,76 @@ class InvoiceController extends BaseController
         return array_map('intval', $this->projectPermissionModel->getActiveProjectIds($userId));
     }
 
+    /**
+     * The picker's options, derived from the SAME id list the access guard uses,
+     * so the dropdown can never offer a project that form()/project() will reject.
+     * One hashtable query rather than N getById() calls.
+     *
+     * @return array<int,string> project_id => name, sorted by name
+     */
+    protected function accessibleProjects(int $userId): array
+    {
+        $ids = $this->accessibleProjectIds($userId);
+        if ($ids === []) {
+            return [];
+        }
+        $rows = $this->db->hashtable(\Kanboard\Model\ProjectModel::TABLE)
+            ->in('id', $ids)
+            ->getAll('id', 'name');
+        asort($rows);
+        return $rows;
+    }
+
+    /**
+     * TimeInvoice bills only the requesting user's hours: report() is called with
+     * six positional arguments, so its $subjectUserIds/$allUsers default to
+     * self-only. Until 1.3.0 ships the "Bill hours for" control, warn rather than
+     * under-bill silently.
+     *
+     * A non-manager cannot see other people's hours (TimeReport gates this), so
+     * they get a generic warning — and only on a genuinely multi-person project,
+     * otherwise the banner would be permanently on.
+     *
+     * @return array{visible:bool,specific:bool,people:int,hours:float}
+     */
+    protected function unbilledParticipants(int $projectId, string $start, string $end, int $userId): array
+    {
+        $silent = ['visible' => false, 'specific' => false, 'people' => 0, 'hours' => 0.0];
+
+        if (! $this->hasTimeReport()) {
+            return $silent;
+        }
+        $model = $this->timeReportModel;
+        if (! method_exists($model, 'participants') || ! method_exists($model, 'canReportOnOthers')) {
+            return $silent;
+        }
+
+        try {
+            if (! $model->canReportOnOthers($projectId, $userId)) {
+                $members = $this->projectUserRoleModel->getAssignableUsers($projectId);
+                return count($members) > 1
+                    ? ['visible' => true, 'specific' => false, 'people' => 0, 'hours' => 0.0]
+                    : $silent;
+            }
+
+            $all = $model->participants($projectId, $start, $end, $userId);
+        } catch (\Throwable $e) {
+            return $silent;
+        }
+
+        unset($all[$userId]);
+        if ($all === []) {
+            return $silent;
+        }
+
+        return [
+            'visible'  => true,
+            'specific' => true,
+            'people'   => count($all),
+            'hours'    => round((float) array_sum(array_column($all, 'hours')), 2),
+        ];
+    }
+
     protected function aiRegistry(): ?object
     {
         $cls = '\\Kanboard\\Plugin\\AiConnector\\Model\\ProviderRegistry';
@@ -54,7 +124,7 @@ class InvoiceController extends BaseController
         if (! $this->hasTimeReport()) {
             $this->response->html($this->helper->layout->app('TimeInvoice:invoice/list', [
                 'title' => t('Invoices'), 'missing_dependency' => true,
-                'invoices' => [], 'outstanding' => 0.0, 'project' => null,
+                'invoices' => [], 'outstanding' => 0.0, 'project' => null, 'projects' => [],
                 'currency' => array('code' => 'USD', 'symbol' => '$'),
             ]));
             return;
@@ -66,6 +136,7 @@ class InvoiceController extends BaseController
             'invoices'    => $this->invoiceModel->listAll($pids),
             'outstanding' => $this->invoiceModel->outstandingTotal($pids),
             'project'     => null,
+            'projects'    => $this->accessibleProjects($userId),
             'missing_dependency' => false,
             'currency'    => $this->globalDefaults()['currency'] ?? array('code' => 'USD', 'symbol' => '$'),
         ]));
@@ -85,8 +156,43 @@ class InvoiceController extends BaseController
             'invoices'    => $this->invoiceModel->listByProject($projectId),
             'outstanding' => $this->invoiceModel->outstandingTotal([$projectId]),
             'project'     => $this->projectModel->getById($projectId),
+            'projects'    => [],
             'missing_dependency' => ! $this->hasTimeReport(),
             'currency'    => $this->globalDefaults()['currency'] ?? array('code' => 'USD', 'symbol' => '$'),
+        ]));
+    }
+
+    /** Invoice detail page — the home for every per-invoice action. */
+    public function show(): void
+    {
+        $userId = $this->userSession->getId();
+        $projectId = $this->request->getIntegerParam('project_id');
+        $id = $this->request->getStringParam('id');
+
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'list', ['plugin' => 'TimeInvoice']));
+            return;
+        }
+
+        $snap = $this->snapshotForPdf($projectId, $id, $userId);
+        if ($snap === []) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
+            return;
+        }
+
+        $record = $this->invoiceModel->load($projectId, $id);
+        $this->response->html($this->helper->layout->app('TimeInvoice:invoice/show', [
+            'title'      => t('Invoice'),
+            'project'    => $this->projectModel->getById($projectId),
+            'invoice'    => $snap,
+            'status'     => (string) ($record['status'] ?? 'draft'),
+            'invoice_id' => $id,
+            'unbilled'   => $this->unbilledParticipants(
+                $projectId,
+                (string) ($snap['range']['start'] ?? date('Y-m-01')),
+                (string) ($snap['range']['end'] ?? date('Y-m-d')),
+                $userId
+            ),
         ]));
     }
 
@@ -142,6 +248,12 @@ class InvoiceController extends BaseController
             'ai_ready'           => $this->aiReady(),
             'ai_profiles'        => $this->aiProfiles(),
             'ai_default_profile' => $this->aiDefaultProfile(),
+            'unbilled'           => $this->unbilledParticipants(
+                $projectId,
+                (string) $values['start_date'],
+                (string) $values['end_date'],
+                $userId
+            ),
         ]));
     }
 
@@ -154,7 +266,6 @@ class InvoiceController extends BaseController
             'rate'        => (float) ($v['rate'] ?? 0),
             'tax_enabled' => ! empty($v['tax_enabled']),
             'tax_rate'    => (float) ($v['tax_rate'] ?? 0),
-            'currency'    => ['code' => $v['currency_code'] ?? 'USD', 'symbol' => $v['currency_symbol'] ?? '$'],
             'client'      => ['name' => $v['client_name'] ?? '', 'address' => $v['client_address'] ?? '', 'email' => $v['client_email'] ?? ''],
             'terms'       => (string) ($v['terms'] ?? ''),
             'terms_days'  => (int) ($v['terms_days'] ?? 30),
@@ -190,10 +301,12 @@ class InvoiceController extends BaseController
     }
 
     /**
-     * Assemble the immutable snapshot frozen onto a sent invoice. Currency and
-     * terms_days come from the layered defaults (global < project), NOT the
-     * draft's hardcoded values, since the form does not expose those fields —
-     * this makes a user's GLOBAL settings (e.g. GBP / Net-15) actually apply.
+     * Assemble the immutable snapshot frozen onto an issued invoice.
+     *
+     * Currency is project-level only (global < project): billing one client in
+     * two currencies is not a real scenario, and the form does not offer it.
+     * terms_days layers global < project < draft, because a rush Net-15 on a
+     * single invoice IS a real scenario.
      */
     protected function freezeSnapshot(array $draft, int $userId): array
     {
@@ -204,7 +317,10 @@ class InvoiceController extends BaseController
         $global  = $this->globalDefaults();
         $project = $this->projectDefaults($projectId);
         $currency  = $project['currency'] ?? ($global['currency'] ?? ['code' => 'USD', 'symbol' => '$']);
-        $termsDays = (int) ($project['terms_days'] ?? ($global['terms_days'] ?? 30));
+        $termsDays = (int) ($draft['terms_days']
+            ?? $project['terms_days']
+            ?? $global['terms_days']
+            ?? 30);
 
         $report = $this->timeReportModel->report(
             $projectId,
@@ -229,6 +345,46 @@ class InvoiceController extends BaseController
             'total'      => $totals['total'],
             'notes'      => (string) (! empty($draft['notes']) ? $draft['notes'] : ($global['terms'] ?? '')),
         ];
+    }
+
+    /**
+     * Condense a snapshot into the numbers the draft form shows live.
+     * Pure seam — unit-testable without a request or TimeReport.
+     *
+     * @return array{hours:float,line_count:int,subtotal:float,tax:float,total:float,symbol:string}
+     */
+    protected function totalsPayload(array $snapshot): array
+    {
+        $items = $snapshot['line_items'] ?? [];
+        return [
+            'hours'      => round((float) array_sum(array_column($items, 'hours')), 2),
+            'line_count' => count($items),
+            'subtotal'   => (float) ($snapshot['subtotal'] ?? 0.0),
+            'tax'        => (float) ($snapshot['tax']['amount'] ?? 0.0),
+            'total'      => (float) ($snapshot['total'] ?? 0.0),
+            'symbol'     => (string) ($snapshot['currency']['symbol'] ?? '$'),
+        ];
+    }
+
+    /**
+     * POST — live totals for the draft form. Mirrors generateCoverNote()'s seam:
+     * the form AJAXes $form.serialize(), so project_id arrives in the BODY.
+     */
+    public function previewTotals(): void
+    {
+        $this->checkCSRFForm();
+        $userId = $this->userSession->getId();
+        // getValues() is single-use/stateful — read it ONCE.
+        $values = $this->request->getValues();
+        $projectId = $this->requestProjectId($values);
+
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+            $this->response->json(['error' => t('Not available for this project.')], 400);
+            return;
+        }
+
+        $draft = array_merge($this->buildDraftFromRequest($values), ['project_id' => $projectId]);
+        $this->response->json($this->totalsPayload($this->freezeSnapshot($draft, $userId)));
     }
 
     public function send(): void
@@ -278,6 +434,16 @@ class InvoiceController extends BaseController
         return $rec;
     }
 
+    /**
+     * Content-Disposition for the PDF response. `inline` lets the browser's own
+     * viewer render the invoice instead of forcing a download — the show page's
+     * "View PDF" action. Pure seam so the choice is unit-testable without HTTP.
+     */
+    protected function contentDisposition(bool $inline, string $name): string
+    {
+        return ($inline ? 'inline' : 'attachment') . '; filename="' . $name . '"';
+    }
+
     public function pdf(): void
     {
         $userId = $this->userSession->getId();
@@ -295,9 +461,11 @@ class InvoiceController extends BaseController
         $bytes = $this->invoicePdf->render($snap);
         $name = ($snap['number'] ?? 'draft') . '.pdf';
 
+        $inline = $this->request->getIntegerParam('inline') === 1;
+
         $this->response->withoutCache();
         $this->response->withContentType('application/pdf');
-        $this->response->withHeader('Content-Disposition', 'attachment; filename="' . $name . '"');
+        $this->response->withHeader('Content-Disposition', $this->contentDisposition($inline, $name));
         $this->response->withBody($bytes);
         $this->response->send();
     }

@@ -1,4 +1,5 @@
 <div class="page-header"><h2><?= t('Invoice for %s', $project['name']) ?></h2></div>
+<?= $this->render('TimeInvoice:invoice/_banner', array('unbilled' => $unbilled)) ?>
 
 <form method="post" action="<?= $this->url->href('InvoiceController', 'saveDraft', array('plugin' => 'TimeInvoice')) ?>" autocomplete="off">
     <?= $this->form->csrf() ?>
@@ -20,6 +21,12 @@
     <?= $this->form->label(t('Tax rate %%'), 'tax_rate') ?>
     <?= $this->form->number('tax_rate', $values, array(), array('step' => '0.001')) ?>
 
+    <?= $this->form->label(t('Payment terms (days)'), 'terms_days') ?>
+    <?= $this->form->number('terms_days', $values) ?>
+    <p class="form-help"><?= t('Overrides the project default for this invoice only.') ?></p>
+
+    <h3><?= t('Client') ?></h3>
+    <p class="form-help"><?= t('Inherited from the project. Changes here apply to this invoice only.') ?></p>
     <?= $this->form->label(t('Client name'), 'client_name') ?>
     <?= $this->form->text('client_name', array('client_name' => $values['client']['name'] ?? '')) ?>
     <?= $this->form->label(t('Client address'), 'client_address') ?>
@@ -44,6 +51,12 @@
             </button>
         </div>
     <?php endif ?>
+
+    <div class="timeinvoice-totals timeinvoice-recalc"
+         data-url="<?= $this->url->href('InvoiceController', 'previewTotals', array('plugin' => 'TimeInvoice')) ?>"
+         data-recalc-fields="start_date,end_date,granularity,rate,tax_enabled,tax_rate">
+        <span class="timeinvoice-totals-idle"><?= t('Totals update as you change the range, grouping, rate or tax.') ?></span>
+    </div>
 
     <div class="form-actions">
         <button type="submit" class="btn btn-blue"><?= t('Save draft') ?></button>

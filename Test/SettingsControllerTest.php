@@ -21,6 +21,14 @@ class SettingsControllerTest extends Base
         $this->assertSame('INV-{YYYY}-{seq}', $s['number_format']); // default
     }
 
+    public function testShowThrowsForNonAdmin(): void
+    {
+        $_SESSION['user'] = ['id' => 2, 'role' => Role::APP_USER];
+        $c = new SettingsController($this->container);
+        $this->expectException(\Kanboard\Core\Controller\AccessForbiddenException::class);
+        $c->show();
+    }
+
     /**
      * Full write-path round-trip through the guarded save() action, run as an
      * admin. Exercises the real controller: the admin gate must pass, the CSRF
@@ -82,7 +90,12 @@ class SettingsControllerTest extends Base
             'rate'          => '999',
         ]);
 
-        $c->save();
+        try {
+            $c->save();
+            $this->fail('non-admin save must throw AccessForbiddenException');
+        } catch (\Kanboard\Core\Controller\AccessForbiddenException $e) {
+            // expected
+        }
 
         $this->assertSame('', $this->container['configModel']->get('timeinvoice_business', ''), 'non-admin write must be rejected');
         $this->assertSame('', $this->container['configModel']->get('timeinvoice_rate', ''), 'non-admin write must be rejected');

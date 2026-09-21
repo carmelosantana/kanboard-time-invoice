@@ -5,6 +5,19 @@
 <?php else: ?>
     <?php if ($project): ?>
         <p><?= $this->url->link(t('New invoice'), 'InvoiceController', 'form', array('plugin' => 'TimeInvoice', 'project_id' => $project['id']), false, 'btn btn-blue') ?></p>
+    <?php elseif (! empty($projects)): ?>
+        <form method="get" action="<?= $this->url->href('InvoiceController', 'form', array('plugin' => 'TimeInvoice')) ?>" class="timeinvoice-new">
+            <input type="hidden" name="plugin" value="TimeInvoice">
+            <input type="hidden" name="controller" value="InvoiceController">
+            <input type="hidden" name="action" value="form">
+            <label for="timeinvoice-new-project"><?= t('Project') ?></label>
+            <select name="project_id" id="timeinvoice-new-project">
+                <?php foreach ($projects as $pid => $pname): ?>
+                    <option value="<?= (int) $pid ?>"><?= $this->text->e($pname) ?></option>
+                <?php endforeach ?>
+            </select>
+            <button type="submit" class="btn btn-blue"><?= t('New invoice') ?></button>
+        </form>
     <?php endif ?>
 
     <p class="timeinvoice-outstanding"><?= t('Outstanding') ?>: <?= $this->helper->invoice->money((float) $outstanding, $currency ?? array('symbol' => '$')) ?></p>
@@ -15,24 +28,20 @@
         <table class="table-striped">
             <tr>
                 <th><?= t('Number') ?></th><th><?= t('Status') ?></th>
-                <th><?= t('Issued') ?></th><th><?= t('Total') ?></th><th><?= t('Actions') ?></th>
+                <th><?= t('Issued') ?></th><th><?= t('Total') ?></th>
             </tr>
             <?php foreach ($invoices as $inv): ?>
                 <tr>
-                    <td><?= $this->text->e($inv['number'] ?? t('(draft)')) ?></td>
+                    <td>
+                        <?= $this->url->link(
+                            $inv['number'] ?? t('(draft)'),
+                            'InvoiceController', 'show',
+                            array('plugin' => 'TimeInvoice', 'project_id' => $inv['project_id'], 'id' => $inv['id'])
+                        ) ?>
+                    </td>
                     <td class="<?= $this->helper->invoice->statusClass($inv['status'] ?? '') ?>"><?= $this->helper->invoice->statusLabel($inv['status'] ?? '') ?></td>
                     <td><?= $this->text->e($inv['issue_date'] ?? $inv['created_at'] ?? '') ?></td>
                     <td><?= $this->helper->invoice->money((float) ($inv['total'] ?? 0), $inv['currency'] ?? array('symbol' => '$')) ?></td>
-                    <td>
-                        <?= $this->url->link(t('PDF'), 'InvoiceController', 'pdf', array('plugin' => 'TimeInvoice', 'project_id' => $inv['project_id'], 'id' => $inv['id'])) ?>
-                        <?php if (($inv['status'] ?? '') === 'draft'): ?>
-                            | <?= $this->url->link(t('Edit'), 'InvoiceController', 'form', array('plugin' => 'TimeInvoice', 'project_id' => $inv['project_id'], 'id' => $inv['id'])) ?>
-                            | <?= $this->url->link(t('Send'), 'InvoiceController', 'send', array('plugin' => 'TimeInvoice', 'project_id' => $inv['project_id'], 'id' => $inv['id']), true, 'timeinvoice-send') ?>
-                            | <?= $this->url->link(t('Delete'), 'InvoiceController', 'delete', array('plugin' => 'TimeInvoice', 'project_id' => $inv['project_id'], 'id' => $inv['id']), true, 'timeinvoice-delete') ?>
-                        <?php elseif (($inv['status'] ?? '') === 'sent'): ?>
-                            | <?= $this->url->link(t('Mark paid'), 'InvoiceController', 'markPaid', array('plugin' => 'TimeInvoice', 'project_id' => $inv['project_id'], 'id' => $inv['id']), true) ?>
-                        <?php endif ?>
-                    </td>
                 </tr>
             <?php endforeach ?>
         </table>

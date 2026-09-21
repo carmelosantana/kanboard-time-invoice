@@ -52,4 +52,63 @@ class TemplateAssetsTest extends Base
         $this->assertStringContainsString('timeinvoice-generate-note', $src);
         $this->assertStringContainsString("name='notes'", $src, 'handler writes into the notes textarea');
     }
+
+    public function testConfigSidebarPartialExistsAndLinks(): void
+    {
+        $path = $this->root() . '/Template/config/sidebar.php';
+        $this->assertFileExists($path);
+        $src = file_get_contents($path);
+        $this->assertStringContainsString("'SettingsController'", $src);
+        $this->assertStringContainsString("'TimeInvoice'", $src);
+    }
+
+    public function testPluginRegistersConfigSidebarHook(): void
+    {
+        $src = file_get_contents($this->root() . '/Plugin.php');
+        $this->assertStringContainsString('template:config:sidebar', $src, 'settings page must be linked from the admin sidebar');
+        $this->assertStringContainsString('TimeInvoice:config/sidebar', $src);
+    }
+
+    public function testFormLabelsClientAsInheritedFromProject(): void
+    {
+        $src = file_get_contents($this->root() . '/Template/invoice/form.php');
+        $this->assertStringContainsString('Inherited from the project', $src, 'the client block must say where its values come from');
+    }
+
+    public function testShowTemplateExistsAndCarriesActions(): void
+    {
+        $path = $this->root() . '/Template/invoice/show.php';
+        $this->assertFileExists($path);
+        $src = file_get_contents($path);
+        foreach (["'pdf'", "'form'", "'send'", "'markPaid'", "'delete'"] as $action) {
+            $this->assertStringContainsString($action, $src, "show page must offer $action");
+        }
+    }
+
+    public function testListRowCollapsesToShowPage(): void
+    {
+        $src = file_get_contents($this->root() . '/Template/invoice/list.php');
+        $this->assertStringContainsString("'show'", $src, 'the number must link to the show page');
+        foreach (["'markPaid'", "'delete'", "'send'"] as $action) {
+            $this->assertStringNotContainsString($action, $src, "$action must live on the show page, not in a list row");
+        }
+    }
+
+    public function testNoSendWordingRemainsInUi(): void
+    {
+        $js = file_get_contents($this->root() . '/Assets/js/timeinvoice.js');
+        $this->assertStringNotContainsString('Send this invoice?', $js, 'confirm copy must not promise an email');
+        $this->assertStringContainsString('Issue this invoice?', $js);
+    }
+
+    public function testFormAndJsCarryTheLiveTotalsRegion(): void
+    {
+        $tpl = file_get_contents($this->root() . '/Template/invoice/form.php');
+        $this->assertStringContainsString('timeinvoice-totals', $tpl, 'form needs a totals region to fill');
+        $this->assertStringContainsString("'previewTotals'", $tpl, 'form must carry the endpoint URL as data');
+
+        $js = file_get_contents($this->root() . '/Assets/js/timeinvoice.js');
+        $this->assertStringContainsString('timeinvoice-totals', $js);
+        $this->assertStringContainsString('recalc-fields', $js, 'handler reads the recalc field list from the region');
+    }
 }
