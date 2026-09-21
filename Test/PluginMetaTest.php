@@ -54,4 +54,16 @@ class PluginMetaTest extends Base
         $plugin = new \Kanboard\Plugin\TimeInvoice\Plugin($this->container);
         $this->assertSame($this->json()['version'], $plugin->getPluginVersion());
     }
+
+    /** 1.2.0 renamed the action to Issue; the shipped copy must not still say "sent". */
+    public function testDescriptionsDoNotSaySent(): void
+    {
+        $json = $this->json()['description'];
+        $this->assertStringNotContainsStringIgnoringCase('sent', $json, 'plugin.json still describes the old "sent" lifecycle');
+        $this->assertStringContainsStringIgnoringCase('issued', $json);
+
+        $class = (new \Kanboard\Plugin\TimeInvoice\Plugin($this->container))->getPluginDescription();
+        $this->assertStringNotContainsStringIgnoringCase('sent', $class, 'Plugin::getPluginDescription() still says "sent"');
+        $this->assertStringContainsStringIgnoringCase('issued', $class);
+    }
 }

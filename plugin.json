@@ -1,7 +1,7 @@
 {
     "name": "TimeInvoice",
-    "description": "Generate polished PDF invoices from your TimeReport hours: pick a project and date range, roll up line items by task/day/week, set rate and tax, and track invoices through draft → sent → paid with stable per-year numbering.",
-    "version": "1.2.0",
+    "description": "Generate polished PDF invoices from your TimeReport hours: pick a project and date range, roll up line items by task, day or week, set rate and tax, and track invoices through draft, issued and paid with stable per-year numbering.",
+    "version": "1.2.1",
     "author": "Carmelo Santana",
     "license": "MIT",
     "homepage": "https://github.com/carmelosantana/kanboard-time-invoice",

@@ -13,7 +13,7 @@
 
 <div class="timeinvoice-actions">
     <?= $this->url->link(t('Download PDF'), 'InvoiceController', 'pdf', array('plugin' => 'TimeInvoice', 'project_id' => $project['id'], 'id' => $invoice_id), false, 'btn') ?>
-    <?= $this->url->link(t('View PDF'), 'InvoiceController', 'pdf', array('plugin' => 'TimeInvoice', 'project_id' => $project['id'], 'id' => $invoice_id, 'inline' => 1), false, 'btn') ?>
+    <?= $this->url->link(t('View PDF'), 'InvoiceController', 'pdf', array('plugin' => 'TimeInvoice', 'project_id' => $project['id'], 'id' => $invoice_id, 'inline' => 1), false, 'btn', '', true) ?>
     <?php if ($status === 'draft'): ?>
         <?= $this->url->link(t('Edit'), 'InvoiceController', 'form', array('plugin' => 'TimeInvoice', 'project_id' => $project['id'], 'id' => $invoice_id), false, 'btn') ?>
         <?= $this->url->link(t('Issue'), 'InvoiceController', 'send', array('plugin' => 'TimeInvoice', 'project_id' => $project['id'], 'id' => $invoice_id), true, 'btn btn-blue timeinvoice-send') ?>

@@ -263,14 +263,29 @@ class InvoiceControllerTest extends Base
         $this->assertNotNull($sentSnap['number'], 'an issued invoice carries its frozen number');
     }
 
-    public function testContentDispositionSwitchesOnInlineFlag(): void
+    /**
+     * Download and View must not be the same action. A header alone cannot beat
+     * a browser configured to download PDFs, so Download forces a transfer with
+     * octet-stream (nothing renders that), while View asks for inline rendering
+     * with the real PDF type.
+     */
+    public function testPdfHeadersForceTransferOnDownloadAndRenderOnView(): void
     {
         $c = new InvoiceController($this->container);
-        $m = new ReflectionMethod($c, 'contentDisposition');
+        $m = new ReflectionMethod($c, 'pdfHeaders');
         $m->setAccessible(true);
-        $this->assertSame('attachment; filename="INV-2026-001.pdf"', $m->invoke($c, false, 'INV-2026-001.pdf'));
-        $this->assertSame('inline; filename="INV-2026-001.pdf"', $m->invoke($c, true, 'INV-2026-001.pdf'));
-        $this->assertSame('inline; filename="draft.pdf"', $m->invoke($c, true, 'draft.pdf'));
+
+        $download = $m->invoke($c, false, 'INV-2026-001.pdf');
+        $this->assertSame('attachment; filename="INV-2026-001.pdf"', $download['Content-Disposition']);
+        $this->assertSame('application/octet-stream', $download['Content-Type'], 'octet-stream so no browser renders it');
+        $this->assertSame('binary', $download['Content-Transfer-Encoding']);
+
+        $view = $m->invoke($c, true, 'INV-2026-001.pdf');
+        $this->assertSame('inline; filename="INV-2026-001.pdf"', $view['Content-Disposition']);
+        $this->assertSame('application/pdf', $view['Content-Type'], 'real type so the browser viewer takes it');
+        $this->assertArrayNotHasKey('Content-Transfer-Encoding', $view);
+
+        $this->assertNotSame($download, $view, 'the two buttons must differ on the wire');
     }
 
     public function testDraftTermsDaysOverridesProjectAndGlobal(): void

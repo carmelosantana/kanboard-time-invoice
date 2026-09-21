@@ -54,13 +54,13 @@ class Plugin extends Base
 
     public function getPluginName(): string        { return 'TimeInvoice'; }
     public function getPluginAuthor(): string      { return 'Carmelo Santana'; }
-    public function getPluginVersion(): string     { return '1.2.0'; }
+    public function getPluginVersion(): string     { return '1.2.1'; }
     public function getPluginLicense(): string     { return 'MIT'; }
     public function getPluginHomepage(): string    { return 'https://github.com/carmelosantana/kanboard-time-invoice'; }
     public function getCompatibleVersion(): string { return '>=1.2.47'; }
 
     public function getPluginDescription(): string
     {
-        return t('Generate polished PDF invoices from your TimeReport hours, tracked through draft, sent and paid with per-year numbering.');
+        return t('Generate polished PDF invoices from your TimeReport hours: pick a project and date range, roll up line items by task, day or week, set rate and tax, and track invoices through draft, issued and paid with stable per-year numbering.');
     }
 }

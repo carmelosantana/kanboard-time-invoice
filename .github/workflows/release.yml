@@ -19,7 +19,7 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME does not match plugin.json v$VERSION"; exit 1
           fi
           mkdir -p /tmp/stage/"$NAME"
-          rsync -a --exclude '.git' --exclude '.github' --exclude 'Test' --exclude '.DS_Store' ./ /tmp/stage/"$NAME"/
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'Test' --exclude 'docs' --exclude '.DS_Store' ./ /tmp/stage/"$NAME"/
           ( cd /tmp/stage && zip -qr "$GITHUB_WORKSPACE/${NAME}-${VERSION}.zip" "$NAME" )
           gh release create "$GITHUB_REF_NAME" "${NAME}-${VERSION}.zip" \
             --title "$GITHUB_REF_NAME" --notes "Release $GITHUB_REF_NAME"

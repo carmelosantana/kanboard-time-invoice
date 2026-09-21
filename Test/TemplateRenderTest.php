@@ -219,4 +219,27 @@ class TemplateRenderTest extends Base
         $this->assertStringContainsString('name="project_id"', $html, 'previewTotals() reads project_id from the POST body');
         $this->assertStringContainsString('name="csrf_token"', $html, 'previewTotals() calls checkCSRFForm()');
     }
+
+    /** View opens in a new tab so it cannot navigate the app away; Download must not. */
+    public function testViewPdfOpensInANewTabAndDownloadDoesNot(): void
+    {
+        $html = $this->render('TimeInvoice:invoice/show', [
+            'project'    => ['id' => 1, 'name' => 'P'],
+            'invoice'    => $this->snapshot(),
+            'status'     => 'draft',
+            'invoice_id' => 'abc',
+            'unbilled'   => $this->silent(),
+        ]);
+
+        preg_match('/<a[^>]*>\s*View PDF\s*<\/a>/', $html, $view);
+        preg_match('/<a[^>]*>\s*Download PDF\s*<\/a>/', $html, $down);
+        $this->assertNotEmpty($view, 'View PDF link rendered');
+        $this->assertNotEmpty($down, 'Download PDF link rendered');
+
+        $this->assertStringContainsString('target="_blank"', $view[0], 'View PDF must open in a new tab');
+        $this->assertStringContainsString('inline=1', html_entity_decode($view[0]), 'View PDF must request inline rendering');
+
+        $this->assertStringNotContainsString('target="_blank"', $down[0], 'Download PDF stays in the tab');
+        $this->assertStringNotContainsString('inline=1', html_entity_decode($down[0]), 'Download PDF must not request inline');
+    }
 }

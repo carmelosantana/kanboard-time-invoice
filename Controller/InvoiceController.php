@@ -435,13 +435,32 @@ class InvoiceController extends BaseController
     }
 
     /**
-     * Content-Disposition for the PDF response. `inline` lets the browser's own
-     * viewer render the invoice instead of forcing a download — the show page's
-     * "View PDF" action. Pure seam so the choice is unit-testable without HTTP.
+     * Headers for the PDF response. Download and View have to differ on the
+     * wire or they are the same button: Content-Disposition alone loses to a
+     * browser configured to download PDFs, so Download also sends
+     * octet-stream, which nothing renders, while View sends the real PDF type
+     * so the built-in viewer takes it. (A browser set to always download PDFs
+     * will still download View — that is a client preference no server header
+     * can override.)
+     *
+     * Pure seam so the choice is unit-testable without HTTP.
+     *
+     * @return array<string,string>
      */
-    protected function contentDisposition(bool $inline, string $name): string
+    protected function pdfHeaders(bool $inline, string $name): array
     {
-        return ($inline ? 'inline' : 'attachment') . '; filename="' . $name . '"';
+        if ($inline) {
+            return [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $name . '"',
+            ];
+        }
+
+        return [
+            'Content-Type'              => 'application/octet-stream',
+            'Content-Disposition'       => 'attachment; filename="' . $name . '"',
+            'Content-Transfer-Encoding' => 'binary',
+        ];
     }
 
     public function pdf(): void
@@ -464,8 +483,9 @@ class InvoiceController extends BaseController
         $inline = $this->request->getIntegerParam('inline') === 1;
 
         $this->response->withoutCache();
-        $this->response->withContentType('application/pdf');
-        $this->response->withHeader('Content-Disposition', $this->contentDisposition($inline, $name));
+        foreach ($this->pdfHeaders($inline, $name) as $header => $value) {
+            $this->response->withHeader($header, $value);
+        }
         $this->response->withBody($bytes);
         $this->response->send();
     }
