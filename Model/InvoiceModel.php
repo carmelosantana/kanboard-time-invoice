@@ -121,7 +121,8 @@ class InvoiceModel extends Base
 
     public function delete(int $projectId, string $id): void
     {
-        $this->db->table(self::TABLE)->eq('project_id', $projectId)->eq('id', $id)->remove();
+        // Only drafts: an issued or paid invoice is a financial record.
+        $this->db->table(self::TABLE)->eq('project_id', $projectId)->eq('id', $id)->eq('status', 'draft')->remove();
     }
 
     public function outstandingTotal(array $projectIds): float

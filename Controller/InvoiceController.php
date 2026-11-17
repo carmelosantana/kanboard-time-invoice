@@ -18,6 +18,22 @@ class InvoiceController extends BaseController
     }
 
     /**
+     * Writing invoices (save, issue, mark paid, delete) changes what a client is
+     * billed, so a read-only project viewer may look but not touch.
+     */
+    protected function canWriteInvoices(int $projectId, int $userId): bool
+    {
+        if (! in_array($projectId, $this->accessibleProjectIds($userId), true)) {
+            return false;
+        }
+        if ($this->userSession->isAdmin()) {
+            return true;
+        }
+        $role = (string) $this->projectUserRoleModel->getUserRole($projectId, $userId);
+        return $role !== '' && $role !== \Kanboard\Core\Security\Role::PROJECT_VIEWER;
+    }
+
+    /**
      * The picker's options, derived from the SAME id list the access guard uses,
      * so the dropdown can never offer a project that form()/project() will reject.
      * One hashtable query rather than N getById() calls.
@@ -278,7 +294,7 @@ class InvoiceController extends BaseController
         $userId = $this->userSession->getId();
         $v = $this->request->getValues();
         $projectId = (int) ($v['project_id'] ?? 0);
-        if (! in_array($projectId, $this->accessibleProjectIds($userId), true)) {
+        if (! $this->canWriteInvoices($projectId, $userId)) {
             $this->response->redirect($this->helper->url->to('InvoiceController', 'list', ['plugin' => 'TimeInvoice']));
             return;
         }
@@ -392,7 +408,7 @@ class InvoiceController extends BaseController
         $userId = $this->userSession->getId();
         $projectId = $this->request->getIntegerParam('project_id');
         $id = $this->request->getStringParam('id');
-        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+        if (! $this->canWriteInvoices($projectId, $userId) || ! $this->hasTimeReport()) {
             $this->response->redirect($this->helper->url->to('InvoiceController', 'list', ['plugin' => 'TimeInvoice']));
             return;
         }
@@ -410,7 +426,7 @@ class InvoiceController extends BaseController
         $this->checkCSRFParam();
         $userId = $this->userSession->getId();
         $projectId = $this->request->getIntegerParam('project_id');
-        if (in_array($projectId, $this->accessibleProjectIds($userId), true)) {
+        if ($this->canWriteInvoices($projectId, $userId)) {
             $this->invoiceModel->markPaid($projectId, $this->request->getStringParam('id'));
         }
         $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));
@@ -551,7 +567,7 @@ class InvoiceController extends BaseController
         $this->checkCSRFParam();
         $userId = $this->userSession->getId();
         $projectId = $this->request->getIntegerParam('project_id');
-        if (in_array($projectId, $this->accessibleProjectIds($userId), true)) {
+        if ($this->canWriteInvoices($projectId, $userId)) {
             $this->invoiceModel->delete($projectId, $this->request->getStringParam('id'));
         }
         $this->response->redirect($this->helper->url->to('InvoiceController', 'project', ['plugin' => 'TimeInvoice', 'project_id' => $projectId]));

@@ -461,4 +461,38 @@ class InvoiceControllerTest extends Base
         $m->setAccessible(true);
         $this->assertFalse($m->invoke($c, 5, '2026-08-01', '2026-08-31', 1)['visible']);
     }
+
+    public function testOnlyProjectMembersAndAboveMayWriteInvoices(): void
+    {
+        $this->createInvoiceSchema();
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Billing']);
+        $um = new \Kanboard\Model\UserModel($this->container);
+        $viewer = $um->create(['username' => 'viewer', 'name' => 'Viewer']);
+        $member = $um->create(['username' => 'member', 'name' => 'Member']);
+        $manager = $um->create(['username' => 'manager', 'name' => 'Manager']);
+        $roles = $this->container['projectUserRoleModel'];
+        $roles->addUser($pid, $viewer, \Kanboard\Core\Security\Role::PROJECT_VIEWER);
+        $roles->addUser($pid, $member, \Kanboard\Core\Security\Role::PROJECT_MEMBER);
+        $roles->addUser($pid, $manager, \Kanboard\Core\Security\Role::PROJECT_MANAGER);
+
+        $c = new InvoiceController($this->container);
+        $m = new ReflectionMethod($c, 'canWriteInvoices');
+        $m->setAccessible(true);
+        $this->assertFalse($m->invoke($c, $pid, $viewer), 'a read-only viewer must not issue, pay, edit or delete invoices');
+        $this->assertTrue($m->invoke($c, $pid, $member));
+        $this->assertTrue($m->invoke($c, $pid, $manager));
+        $this->assertFalse($m->invoke($c, $pid, 999), 'a non-member must not write');
+    }
+
+    public function testWriteActionsUseTheWriteGuard(): void
+    {
+        $src = file_get_contents(dirname(__DIR__) . '/Controller/InvoiceController.php');
+        foreach (['saveDraft', 'send', 'markPaid', 'delete'] as $action) {
+            $this->assertMatchesRegularExpression(
+                '/function ' . $action . '\(\): void\s*\{(?:(?!\n    public function).)*canWriteInvoices\(/s',
+                $src,
+                "$action() must call canWriteInvoices()"
+            );
+        }
+    }
 }
