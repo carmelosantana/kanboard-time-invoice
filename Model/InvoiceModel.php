@@ -34,11 +34,15 @@ class InvoiceModel extends Base
     {
         $id = (! empty($draft['id']) && is_string($draft['id'])) ? $draft['id'] : $this->newId();
         $existing = $this->load($projectId, $id);
+        if ($existing !== null && ! self::isEditable($existing)) {
+            throw new \DomainException('Only draft invoices can be edited');
+        }
 
         $record = array_merge($draft, [
             'id'         => $id,
             'project_id' => $projectId,
-            'user_id'    => $userId,
+            // The draft keeps its owner: issuing bills the owner's hours.
+            'user_id'    => (int) ($existing['user_id'] ?? $userId),
             'status'     => 'draft',
             // Preserve the original creation time when re-saving a draft, so
             // the newest-first ordering does not jump on every edit.
@@ -47,6 +51,12 @@ class InvoiceModel extends Base
 
         $this->put($projectId, $id, $record);
         return $id;
+    }
+
+    /** A new invoice (null) or a draft may be edited; issued and paid ones may not. */
+    public static function isEditable(?array $record): bool
+    {
+        return $record === null || ($record['status'] ?? '') === 'draft';
     }
 
     public function load(int $projectId, string $id): ?array
@@ -92,6 +102,9 @@ class InvoiceModel extends Base
         if ($record === null) {
             throw new \RuntimeException('Invoice not found');
         }
+        if (($record['status'] ?? '') !== 'draft') {
+            throw new \DomainException('Only draft invoices can be issued');
+        }
         $issueDate = $frozenSnapshot['issue_date'] ?? date('Y-m-d');
 
         $counter = json_decode($this->configModel->get(self::CFG_COUNTER, '{}'), true) ?: [];
@@ -108,15 +121,17 @@ class InvoiceModel extends Base
         return $record;
     }
 
-    public function markPaid(int $projectId, string $id): void
+    /** Issued -> paid. Returns false (and changes nothing) from any other status. */
+    public function markPaid(int $projectId, string $id): bool
     {
         $record = $this->load($projectId, $id);
-        if ($record === null) {
-            return;
+        if ($record === null || ($record['status'] ?? '') !== 'sent') {
+            return false;
         }
         $record['status'] = 'paid';
         $record['paid_at'] = date('Y-m-d H:i:s');
         $this->put($projectId, $id, $record);
+        return true;
     }
 
     public function delete(int $projectId, string $id): void
