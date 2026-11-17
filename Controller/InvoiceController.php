@@ -242,6 +242,10 @@ class InvoiceController extends BaseController
 
         $id = $this->request->getStringParam('id');
         $existing = $id !== '' ? $this->invoiceModel->load($projectId, $id) : null;
+        if (! \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel::isEditable($existing)) {
+            $this->response->redirect($this->helper->url->to('InvoiceController', 'show', ['plugin' => 'TimeInvoice', 'project_id' => $projectId, 'id' => $id]));
+            return;
+        }
         $defaults = \Kanboard\Plugin\TimeInvoice\Model\DefaultsResolver::resolve(
             $this->globalDefaults(),
             $this->projectDefaults($projectId),
@@ -301,8 +305,10 @@ class InvoiceController extends BaseController
 
         $draft = $this->buildDraftFromRequest($v);
         $id = (string) ($v['id'] ?? '');
-        if ($id !== '' && $this->invoiceModel->load($projectId, $id)) {
-            $existing = $this->invoiceModel->load($projectId, $id);
+        $existing = $id !== '' ? $this->invoiceModel->load($projectId, $id) : null;
+        if (! \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel::isEditable($existing)) {
+            $this->flash->failure(t('Only draft invoices can be edited.'));
+        } elseif ($existing !== null) {
             $this->invoiceModel->createDraft($projectId, $userId, array_merge($draft, ['id' => $existing['id']]));
         } else {
             $this->invoiceModel->createDraft($projectId, $userId, $draft);
@@ -337,10 +343,12 @@ class InvoiceController extends BaseController
             ?? $global['terms_days']
             ?? 30);
 
+        // Bill the draft owner's hours; a request-built preview has no owner yet.
+        $billedUserId = (int) ($draft['user_id'] ?? $userId);
         $report = $this->timeReportModel->report(
             $projectId,
             $draft['range']['start'], $draft['range']['end'],
-            $draft['granularity'] ?? 'task', true, $userId
+            $draft['granularity'] ?? 'task', true, $billedUserId
         );
         $items  = \Kanboard\Plugin\TimeInvoice\Model\InvoiceBuilder::lineItems($report['breakdown'] ?? [], $rate);
         $totals = \Kanboard\Plugin\TimeInvoice\Model\InvoiceBuilder::totals($items, ! empty($draft['tax_enabled']), (float) ($draft['tax_rate'] ?? 0));
