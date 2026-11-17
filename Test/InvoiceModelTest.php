@@ -93,4 +93,22 @@ class InvoiceModelTest extends Base
         $this->assertCount(2, $m->listAll([$p1, $p2]));
         $this->assertCount(1, $m->listAll([$p1]));
     }
+
+    public function testDeleteOnlyRemovesDrafts(): void
+    {
+        $this->createInvoiceSchema();
+        $pid = $this->seedProject();
+        $m = new InvoiceModel($this->container);
+        $sent = $m->createDraft($pid, 1, []);
+        $m->send($pid, $sent, ['issue_date' => '2026-08-23', 'total' => 0.0]);
+        $paid = $m->createDraft($pid, 1, []);
+        $m->send($pid, $paid, ['issue_date' => '2026-08-23', 'total' => 0.0]);
+        $m->markPaid($pid, $paid);
+
+        $m->delete($pid, $sent);
+        $m->delete($pid, $paid);
+
+        $this->assertNotNull($m->load($pid, $sent), 'an issued invoice is a financial record and must survive delete()');
+        $this->assertNotNull($m->load($pid, $paid), 'a paid invoice must survive delete()');
+    }
 }

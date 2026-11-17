@@ -8,7 +8,7 @@ class InvoiceHelper extends Base
 {
     public function money(float $amount, array $currency): string
     {
-        return ($currency['symbol'] ?? '$') . number_format($amount, 2);
+        return $this->helper->text->e((string) ($currency['symbol'] ?? '$')) . number_format($amount, 2);
     }
 
     public function statusLabel(string $status): string
