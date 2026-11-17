@@ -111,4 +111,10 @@ class TemplateAssetsTest extends Base
         $this->assertStringContainsString('timeinvoice-totals', $js);
         $this->assertStringContainsString('recalc-fields', $js, 'handler reads the recalc field list from the region');
     }
+
+    public function testTotalsBoxNeverConcatenatesRawSymbolIntoHtml(): void
+    {
+        $js = file_get_contents($this->root() . '/Assets/js/timeinvoice.js');
+        $this->assertDoesNotMatchRegularExpression('/\+\s*r\.symbol\b/', $js, 'r.symbol is admin/manager-set text: escape it before .html()');
+    }
 }

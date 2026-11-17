@@ -29,4 +29,10 @@ class InvoiceHelperTest extends Base
         $this->assertSame('Draft', $h->statusLabel('draft'));
         $this->assertSame('Paid', $h->statusLabel('paid'));
     }
+
+    public function testMoneyEscapesTheCurrencySymbol(): void
+    {
+        $h = new InvoiceHelper($this->container);
+        $this->assertSame('&lt;b&gt;X&lt;/b&gt;1.00', $h->money(1.0, ['symbol' => '<b>X</b>']));
+    }
 }

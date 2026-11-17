@@ -58,10 +58,11 @@
                 $box.text(r && r.error ? r.error : "Could not calculate totals.");
                 return;
             }
+            var sym = jQuery("<span>").text(r.symbol || "").html();
             var html = "<strong>" + r.hours.toFixed(2) + "</strong> hours \u00b7 " +
-                r.line_count + " line item(s) \u00b7 Subtotal " + r.symbol + r.subtotal.toFixed(2);
-            if (r.tax) { html += " \u00b7 Tax " + r.symbol + r.tax.toFixed(2); }
-            html += " \u00b7 <strong>Total " + r.symbol + r.total.toFixed(2) + "</strong>";
+                (r.line_count | 0) + " line item(s) \u00b7 Subtotal " + sym + r.subtotal.toFixed(2);
+            if (r.tax) { html += " \u00b7 Tax " + sym + r.tax.toFixed(2); }
+            html += " \u00b7 <strong>Total " + sym + r.total.toFixed(2) + "</strong>";
             $box.html(html);
         }).fail(function () {
             $box.text("Could not calculate totals.");
