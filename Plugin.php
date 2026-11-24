@@ -29,8 +29,8 @@ class Plugin extends Base
         $this->route->addRoute('timeinvoice/generate-note', 'InvoiceController', 'generateCoverNote', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/project/settings', 'ProjectSettingsController', 'show', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/project/settings/save', 'ProjectSettingsController', 'save', 'TimeInvoice');
-        $this->route->addRoute('timeinvoice/settings', 'SettingsController', 'show', 'TimeInvoice');
-        $this->route->addRoute('timeinvoice/settings/save', 'SettingsController', 'save', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/settings', 'TimeInvoiceSettingsController', 'show', 'TimeInvoice');
+        $this->route->addRoute('timeinvoice/settings/save', 'TimeInvoiceSettingsController', 'save', 'TimeInvoice');
 
         // Entry points.
         $this->template->hook->attach('template:project:sidebar', 'TimeInvoice:invoice/sidebar');

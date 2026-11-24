@@ -1,7 +1,7 @@
 <?php
 require_once 'tests/units/Base.php';
 use KanboardTests\units\Base;
-use Kanboard\Plugin\TimeInvoice\Controller\SettingsController;
+use Kanboard\Plugin\TimeInvoice\Controller\TimeInvoiceSettingsController;
 use Kanboard\Core\Security\Role;
 
 class SettingsControllerTest extends Base
@@ -12,7 +12,7 @@ class SettingsControllerTest extends Base
             'timeinvoice_rate' => '175',
             'timeinvoice_business' => json_encode(['name' => 'CS Consulting']),
         ]);
-        $c = new SettingsController($this->container);
+        $c = new TimeInvoiceSettingsController($this->container);
         $m = new ReflectionMethod($c, 'currentSettings');
         $m->setAccessible(true);
         $s = $m->invoke($c);
@@ -24,7 +24,7 @@ class SettingsControllerTest extends Base
     public function testShowThrowsForNonAdmin(): void
     {
         $_SESSION['user'] = ['id' => 2, 'role' => Role::APP_USER];
-        $c = new SettingsController($this->container);
+        $c = new TimeInvoiceSettingsController($this->container);
         $this->expectException(\Kanboard\Core\Controller\AccessForbiddenException::class);
         $c->show();
     }
@@ -40,7 +40,7 @@ class SettingsControllerTest extends Base
         $this->loginAsAdmin();
         $this->silenceRedirects();
 
-        $c = new SettingsController($this->container);
+        $c = new TimeInvoiceSettingsController($this->container);
         $this->assertTrue($c->userSession->isAdmin(), 'harness session must be admin for the write-path test');
 
         $csrf = $this->container['token']->getCSRFToken();
@@ -81,7 +81,7 @@ class SettingsControllerTest extends Base
         $_SESSION['user'] = ['id' => 2, 'role' => Role::APP_MANAGER];
         $this->silenceRedirects();
 
-        $c = new SettingsController($this->container);
+        $c = new TimeInvoiceSettingsController($this->container);
         $this->assertFalse($c->userSession->isAdmin(), 'sanity: the session is not admin');
 
         $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
@@ -104,7 +104,7 @@ class SettingsControllerTest extends Base
     public function testCurrentSettingsReadsAiStyle(): void
     {
         $this->container['configModel']->save(['timeinvoice_ai_style' => 'Terse and formal.']);
-        $c = new SettingsController($this->container);
+        $c = new TimeInvoiceSettingsController($this->container);
         $m = new ReflectionMethod($c, 'currentSettings');
         $m->setAccessible(true);
         $this->assertSame('Terse and formal.', $m->invoke($c)['ai_style']);
@@ -112,7 +112,7 @@ class SettingsControllerTest extends Base
 
     public function testCurrentSettingsAiStyleDefaultsEmpty(): void
     {
-        $c = new SettingsController($this->container);
+        $c = new TimeInvoiceSettingsController($this->container);
         $m = new ReflectionMethod($c, 'currentSettings');
         $m->setAccessible(true);
         $this->assertSame('', $m->invoke($c)['ai_style']);
@@ -122,7 +122,7 @@ class SettingsControllerTest extends Base
     {
         $_SESSION['user'] = ['id' => 1, 'role' => \Kanboard\Core\Security\Role::APP_ADMIN];
         $this->silenceRedirects();
-        $c = new SettingsController($this->container);
+        $c = new TimeInvoiceSettingsController($this->container);
         $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
             'csrf_token' => $this->container['token']->getCSRFToken(),
             'ai_style'   => 'First-person plural, outcome-focused.',

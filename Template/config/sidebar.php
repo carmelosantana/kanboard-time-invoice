@@ -1,3 +1,3 @@
 <li>
-    <?= $this->url->link(t('Invoices'), 'SettingsController', 'show', array('plugin' => 'TimeInvoice')) ?>
+    <?= $this->url->link(t('Invoices'), 'TimeInvoiceSettingsController', 'show', array('plugin' => 'TimeInvoice')) ?>
 </li>

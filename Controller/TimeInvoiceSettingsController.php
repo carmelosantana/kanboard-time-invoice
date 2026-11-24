@@ -5,7 +5,7 @@ namespace Kanboard\Plugin\TimeInvoice\Controller;
 use Kanboard\Controller\BaseController;
 use Kanboard\Core\Controller\AccessForbiddenException;
 
-class SettingsController extends BaseController
+class TimeInvoiceSettingsController extends BaseController
 {
     protected function currentSettings(): array
     {
@@ -52,6 +52,6 @@ class SettingsController extends BaseController
             'timeinvoice_number_format' => (string) ($v['number_format'] ?? 'INV-{YYYY}-{seq}'),
             'timeinvoice_ai_style'      => (string) ($v['ai_style'] ?? ''),
         ]);
-        $this->response->redirect($this->helper->url->to('SettingsController', 'show', ['plugin' => 'TimeInvoice']));
+        $this->response->redirect($this->helper->url->to('TimeInvoiceSettingsController', 'show', ['plugin' => 'TimeInvoice']));
     }
 }

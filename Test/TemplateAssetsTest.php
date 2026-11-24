@@ -58,7 +58,7 @@ class TemplateAssetsTest extends Base
         $path = $this->root() . '/Template/config/sidebar.php';
         $this->assertFileExists($path);
         $src = file_get_contents($path);
-        $this->assertStringContainsString("'SettingsController'", $src);
+        $this->assertStringContainsString("'TimeInvoiceSettingsController'", $src);
         $this->assertStringContainsString("'TimeInvoice'", $src);
     }
 

@@ -1,6 +1,6 @@
 <div class="page-header"><h2><?= t('Invoice settings') ?></h2></div>
 
-<form method="post" action="<?= $this->url->href('SettingsController', 'save', array('plugin' => 'TimeInvoice')) ?>" autocomplete="off">
+<form method="post" action="<?= $this->url->href('TimeInvoiceSettingsController', 'save', array('plugin' => 'TimeInvoice')) ?>" autocomplete="off">
     <?= $this->form->csrf() ?>
 
     <?= $this->form->label(t('Business name'), 'business_name') ?>
