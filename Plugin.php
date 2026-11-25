@@ -3,6 +3,7 @@
 namespace Kanboard\Plugin\TimeInvoice;
 
 use Kanboard\Core\Plugin\Base;
+use Kanboard\Core\Security\Role;
 
 class Plugin extends Base
 {
@@ -31,6 +32,8 @@ class Plugin extends Base
         $this->route->addRoute('timeinvoice/project/settings/save', 'ProjectSettingsController', 'save', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/settings', 'TimeInvoiceSettingsController', 'show', 'TimeInvoice');
         $this->route->addRoute('timeinvoice/settings/save', 'TimeInvoiceSettingsController', 'save', 'TimeInvoice');
+        // Its own rule: the old shared name SettingsController took core's admin rule; this one would fall to the app-user default (#7337).
+        $this->applicationAccessMap->add('TimeInvoiceSettingsController', '*', Role::APP_ADMIN);
 
         // Entry points.
         $this->template->hook->attach('template:project:sidebar', 'TimeInvoice:invoice/sidebar');
