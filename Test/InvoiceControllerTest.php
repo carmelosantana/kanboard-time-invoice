@@ -495,4 +495,47 @@ class InvoiceControllerTest extends Base
             );
         }
     }
+
+    /**
+     * Sweep 2026-11-25 #1: a read-only viewer reached the AI call and spent the admin's provider
+     * credit, while saveDraft() refuses viewers. Generating a cover note is invoice writing.
+     */
+    public function testViewerCannotReachTheCoverNoteAiCall(): void
+    {
+        $this->createInvoiceSchema();
+        $this->container['timeReportModel'] = fn ($x) => new \stdClass();
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Billing']);
+        $um = new \Kanboard\Model\UserModel($this->container);
+        $viewer = $um->create(['username' => 'viewer', 'name' => 'Viewer']);
+        $member = $um->create(['username' => 'member', 'name' => 'Member']);
+        $roles = $this->container['projectUserRoleModel'];
+        $roles->addUser($pid, $viewer, \Kanboard\Core\Security\Role::PROJECT_VIEWER);
+        $roles->addUser($pid, $member, \Kanboard\Core\Security\Role::PROJECT_MEMBER);
+
+        $reached = [];
+        foreach (['viewer' => $viewer, 'member' => $member] as $who => $uid) {
+            $_SESSION['user'] = ['id' => $uid, 'role' => \Kanboard\Core\Security\Role::APP_USER];
+            $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
+                'csrf_token' => $this->container['token']->getCSRFToken(),
+                'project_id' => (string) $pid,
+            ]);
+            $this->container['response'] = new class($this->container) extends \Kanboard\Core\Http\Response {
+                public function json(array $data, $statusCode = 200)
+                {
+                }
+            };
+            $c = new class($this->container) extends InvoiceController {
+                public bool $reachedAi = false;
+                protected function aiReady(): bool
+                {
+                    $this->reachedAi = true;
+                    return false;
+                }
+            };
+            $c->generateCoverNote();
+            $reached[$who] = $c->reachedAi;
+        }
+        $this->assertFalse($reached['viewer'], 'a read-only viewer must not reach the AI call');
+        $this->assertTrue($reached['member'], 'sanity: a member still reaches it');
+    }
 }

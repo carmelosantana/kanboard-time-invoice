@@ -551,7 +551,8 @@ class InvoiceController extends BaseController
         $values = $this->request->getValues();
         $projectId = $this->requestProjectId($values);
 
-        if (! in_array($projectId, $this->accessibleProjectIds($userId), true) || ! $this->hasTimeReport()) {
+        // Drafting a cover note is invoice writing, and it spends the provider's credit: viewers may not.
+        if (! $this->canWriteInvoices($projectId, $userId) || ! $this->hasTimeReport()) {
             $this->response->json(['error' => t('Not available for this project.')], 400);
             return;
         }
