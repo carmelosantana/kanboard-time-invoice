@@ -132,7 +132,7 @@ class CoverNoteGeneratorTest extends Base
         [$userId, $feature, $input] = $quota->calls[0];
         $this->assertSame(1, $userId);
         $this->assertSame('timeinvoice.cover_note', $feature);
-        $this->assertSame(array_column($registry->messages, 'content'), $input);
+        $this->assertSame([...array_column($registry->messages, 'content'), CoverNoteGenerator::SCHEMA], $input);
     }
 
     public function testARefusalThrowsAndTheProviderIsNotCalled(): void
@@ -164,4 +164,17 @@ class CoverNoteGeneratorTest extends Base
         $this->assertStringContainsString(str_repeat('a', 300), $sent, 'what fits is kept');
         $this->assertStringNotContainsString('bbbb', $sent, 'what does not fit is dropped');
     }
+
+    public function testTheSchemaIsCountedAndLeftOutOfTheContextBudget(): void
+    {
+        $this->withReport([['key' => 'a', 'label' => '#1', 'hours' => 5.0, 'task_count' => 1, 'task_ids' => [11]]]);
+        $quota = new FakeQuota(2000);
+        $gen = new CoverNoteGeneratorForTest($this->container);
+        $gen->gathered = [['title' => 'A', 'description' => str_repeat('a', 5000), 'subtasks' => [], 'comments' => []]];
+        $gen->generate($this->ctx(), new FakeRegistry(), new FakeCatalog(), $quota);
+        $input = $quota->calls[0][2];
+        $this->assertContains(CoverNoteGenerator::SCHEMA, $input);
+        $this->assertLessThanOrEqual(2000, array_sum(array_map('mb_strlen', $input)));
+    }
+
 }

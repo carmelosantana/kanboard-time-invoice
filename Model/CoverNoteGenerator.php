@@ -62,7 +62,7 @@ class CoverNoteGenerator extends Base
 
         $system = self::systemPrompt((string) ($ctx['style'] ?? ''));
         $budget = max(0, $catalog->getInputBudget($profileId, self::OUTPUT_RESERVE) - $catalog->countTokens($system, $profileId));
-        $chars  = $quota->maxInputChars() - mb_strlen($system, 'UTF-8');
+        $chars  = $quota->maxInputChars() - mb_strlen($system, 'UTF-8') - mb_strlen(self::SCHEMA, 'UTF-8');
         // A unit fits when the payload stays inside both the model's token budget and
         // AiConnector's input cap (characters); assemble() sees that as a 0/1 cost against 0.
         $payload = CoverNoteContext::assemble($header, $tasks, 0,
@@ -72,7 +72,7 @@ class CoverNoteGenerator extends Base
             ['role' => 'system', 'content' => $system],
             ['role' => 'user',   'content' => $payload],
         ];
-        $refusal = $quota->consume($userId, 'timeinvoice.cover_note', array_column($messages, 'content'));
+        $refusal = $quota->consume($userId, 'timeinvoice.cover_note', [...array_column($messages, 'content'), self::SCHEMA]);
         if ($refusal !== null) {
             throw new CoverNoteRefused($refusal);
         }
