@@ -2,6 +2,7 @@
 require_once 'tests/units/Base.php';
 use KanboardTests\units\Base;
 use Kanboard\Plugin\TimeInvoice\Model\CoverNoteGenerator;
+use Kanboard\Plugin\TimeInvoice\Model\CoverNoteRefused;
 
 /** Test subclass: overrides the finder-backed gather step with fixed records. */
 class CoverNoteGeneratorForTest extends CoverNoteGenerator
@@ -40,6 +41,19 @@ class FakeCatalog
     public function countTokens(string $text, ?string $profileId = null): int { return (int) ceil(mb_strlen($text) / 4); }
 }
 
+/** Fake AiConnector AiQuota — records the check, refuses when told to. */
+class FakeQuota
+{
+    public array $calls = [];
+    public function __construct(public int $cap = 32000, public ?string $refusal = null) {}
+    public function maxInputChars(): int { return $this->cap; }
+    public function consume(int $userId, string $feature, string|array $input): ?string
+    {
+        $this->calls[] = [$userId, $feature, $input];
+        return $this->refusal;
+    }
+}
+
 class CoverNoteGeneratorTest extends Base
 {
     private function ctx(): array
@@ -69,7 +83,7 @@ class CoverNoteGeneratorTest extends Base
             ['key' => 'b', 'label' => '#2', 'hours' => 2.0, 'task_count' => 1, 'task_ids' => [12, 13]],
         ]);
         $gen = new CoverNoteGeneratorForTest($this->container);
-        $note = $gen->generate($this->ctx(), new FakeRegistry(), new FakeCatalog());
+        $note = $gen->generate($this->ctx(), new FakeRegistry(), new FakeCatalog(), new FakeQuota());
         $this->assertSame('We rebuilt the homepage hero this period.', $note);
         sort($gen->sawTaskIds);
         $this->assertSame([11, 12, 13], $gen->sawTaskIds, 'deduped union of breakdown[].task_ids');
@@ -82,7 +96,7 @@ class CoverNoteGeneratorTest extends Base
         $ctx = $this->ctx();
         $ctx['style'] = 'Terse and formal.';
         $gen = new CoverNoteGeneratorForTest($this->container);
-        $gen->generate($ctx, $reg, new FakeCatalog());
+        $gen->generate($ctx, $reg, new FakeCatalog(), new FakeQuota());
         $this->assertSame('system', $reg->messages[0]['role']);
         $this->assertStringContainsString('Terse and formal.', $reg->messages[0]['content']);
         $this->assertSame('user', $reg->messages[1]['role']);
@@ -104,6 +118,50 @@ class CoverNoteGeneratorTest extends Base
             public function structured(array $m, string $s, ?string $p): array { return ['cover_note' => '   ']; }
         };
         $gen = new CoverNoteGeneratorForTest($this->container);
-        $this->assertNull($gen->generate($this->ctx(), $emptyReg, new FakeCatalog()));
+        $this->assertNull($gen->generate($this->ctx(), $emptyReg, new FakeCatalog(), new FakeQuota()));
+    }
+
+    public function testTheQuotaIsCheckedWithTheTextSentBeforeTheProvider(): void
+    {
+        $this->withReport([['key' => 'a', 'label' => '#1', 'hours' => 5.0, 'task_count' => 1, 'task_ids' => [11]]]);
+        $registry = new FakeRegistry();
+        $quota = new FakeQuota();
+        (new CoverNoteGeneratorForTest($this->container))->generate($this->ctx(), $registry, new FakeCatalog(), $quota);
+
+        $this->assertCount(1, $quota->calls);
+        [$userId, $feature, $input] = $quota->calls[0];
+        $this->assertSame(1, $userId);
+        $this->assertSame('timeinvoice.cover_note', $feature);
+        $this->assertSame(array_column($registry->messages, 'content'), $input);
+    }
+
+    public function testARefusalThrowsAndTheProviderIsNotCalled(): void
+    {
+        $this->withReport([['key' => 'a', 'label' => '#1', 'hours' => 5.0, 'task_count' => 1, 'task_ids' => [11]]]);
+        $registry = new FakeRegistry();
+        try {
+            (new CoverNoteGeneratorForTest($this->container))->generate($this->ctx(), $registry, new FakeCatalog(), new FakeQuota(32000, 'Limit reached.'));
+            $this->fail('expected a refusal');
+        } catch (CoverNoteRefused $e) {
+            $this->assertSame('Limit reached.', $e->getMessage());
+        }
+        $this->assertSame([], $registry->messages);
+    }
+
+    public function testTheTaskContextIsTrimmedToFitTheInputCap(): void
+    {
+        $this->withReport([['key' => 'a', 'label' => '#1', 'hours' => 5.0, 'task_count' => 1, 'task_ids' => [11, 12]]]);
+        $gen = new CoverNoteGeneratorForTest($this->container);
+        $gen->gathered = [
+            ['title' => 'A', 'description' => str_repeat('a', 300), 'subtasks' => [], 'comments' => []],
+            ['title' => 'B', 'description' => str_repeat('b', 5000), 'subtasks' => [], 'comments' => []],
+        ];
+        $registry = new FakeRegistry();
+        $gen->generate($this->ctx(), $registry, new FakeCatalog(), new FakeQuota(2000));
+
+        $sent = implode('', array_column($registry->messages, 'content'));
+        $this->assertLessThanOrEqual(2000, mb_strlen($sent));
+        $this->assertStringContainsString(str_repeat('a', 300), $sent, 'what fits is kept');
+        $this->assertStringNotContainsString('bbbb', $sent, 'what does not fit is dropped');
     }
 }

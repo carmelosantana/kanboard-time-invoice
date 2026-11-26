@@ -3,6 +3,7 @@
 namespace Kanboard\Plugin\TimeInvoice\Controller;
 
 use Kanboard\Controller\BaseController;
+use Kanboard\Plugin\TimeInvoice\Model\CoverNoteRefused;
 
 class InvoiceController extends BaseController
 {
@@ -115,11 +116,18 @@ class InvoiceController extends BaseController
         return class_exists($cls) ? new $cls($this->container) : null;
     }
 
-    /** Both AiConnector classes must exist (1.1.0+) AND a provider must be usable. */
+    /** AiQuota is AiConnector's shared spend guard (1.3.0+); without it the cover note stays off. */
+    protected function aiQuota(): ?object
+    {
+        $cls = '\\Kanboard\\Plugin\\AiConnector\\Model\\AiQuota';
+        return class_exists($cls) ? new $cls($this->container) : null;
+    }
+
+    /** The three AiConnector classes must exist (1.3.0+) AND a provider must be usable. */
     protected function aiReady(): bool
     {
         $reg = $this->aiRegistry();
-        return $reg !== null && $this->aiCatalog() !== null && $reg->isReady();
+        return $reg !== null && $this->aiCatalog() !== null && $this->aiQuota() !== null && $reg->isReady();
     }
 
     protected function aiProfiles(): array
@@ -557,12 +565,17 @@ class InvoiceController extends BaseController
             return;
         }
         if (! $this->aiReady()) {
-            $this->response->json(['error' => t('AI cover notes need the AiConnector plugin (1.1.0+) with a configured provider.')], 400);
+            $this->response->json(['error' => t('AI cover notes need the AiConnector plugin (1.3.0+) with a configured provider.')], 400);
             return;
         }
 
-        $ctx  = $this->coverNoteContext($values, $projectId, $userId);
-        $note = $this->coverNoteGenerator->generate($ctx, $this->aiRegistry(), $this->aiCatalog());
+        $ctx = $this->coverNoteContext($values, $projectId, $userId);
+        try {
+            $note = $this->coverNoteGenerator->generate($ctx, $this->aiRegistry(), $this->aiCatalog(), $this->aiQuota());
+        } catch (CoverNoteRefused $e) {
+            $this->response->json(['error' => $e->getMessage()], 429);
+            return;
+        }
 
         if ($note === null) {
             $this->response->json(['error' => t('The model returned no cover note. Try again or pick a different provider.')], 502);

@@ -538,4 +538,45 @@ class InvoiceControllerTest extends Base
         $this->assertFalse($reached['viewer'], 'a read-only viewer must not reach the AI call');
         $this->assertTrue($reached['member'], 'sanity: a member still reaches it');
     }
+
+    public function testAQuotaRefusalAnswers429WithTheReason(): void
+    {
+        $this->createInvoiceSchema();
+        $this->container['timeReportModel'] = fn ($x) => new \stdClass();
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Billing']);
+        $member = (new \Kanboard\Model\UserModel($this->container))->create(['username' => 'member', 'name' => 'Member']);
+        $this->container['projectUserRoleModel']->addUser($pid, $member, \Kanboard\Core\Security\Role::PROJECT_MEMBER);
+        $_SESSION['user'] = ['id' => $member, 'role' => \Kanboard\Core\Security\Role::APP_USER];
+        $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
+            'csrf_token' => $this->container['token']->getCSRFToken(),
+            'project_id' => (string) $pid,
+        ]);
+        $sent = [];
+        $this->container['response'] = new class($this->container, $sent) extends \Kanboard\Core\Http\Response {
+            public function __construct($c, private array &$sent) { parent::__construct($c); }
+            public function json(array $data, $statusCode = 200) { $this->sent = [$data, $statusCode]; }
+        };
+        $this->container['coverNoteGenerator'] = fn ($x) => new class {
+            public function generate(array $ctx, object $r, object $c, ?object $q = null): ?string
+            {
+                throw new \Kanboard\Plugin\TimeInvoice\Model\CoverNoteRefused('You have reached the AI limit.');
+            }
+        };
+        $c = new class($this->container) extends InvoiceController {
+            protected function aiReady(): bool { return true; }
+            protected function aiRegistry(): ?object { return new \stdClass(); }
+            protected function aiCatalog(): ?object { return new \stdClass(); }
+            protected function aiQuota(): ?object { return new \stdClass(); }
+            protected function coverNoteContext(array $values, int $projectId, int $userId): array { return []; }
+        };
+        $c->generateCoverNote();
+
+        $this->assertSame([['error' => 'You have reached the AI limit.'], 429], $sent);
+    }
+
+    public function testAiReadyNeedsAiConnectorsQuotaService(): void
+    {
+        $src = file_get_contents(dirname(__DIR__) . '/Controller/InvoiceController.php');
+        $this->assertMatchesRegularExpression('/function aiReady\(\)[^}]*aiQuota\(\)/s', $src);
+    }
 }

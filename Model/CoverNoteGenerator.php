@@ -22,8 +22,10 @@ class CoverNoteGenerator extends Base
      * @param array  $ctx      generation context (see plan Task 3 interface)
      * @param object $registry AiConnector ProviderRegistry (has structured())
      * @param object $catalog  AiConnector ModelCatalog (has getInputBudget()/countTokens())
+     * @param object $quota    AiConnector AiQuota (has maxInputChars()/consume())
+     * @throws CoverNoteRefused when the quota or input cap refuses the call
      */
-    public function generate(array $ctx, object $registry, object $catalog): ?string
+    public function generate(array $ctx, object $registry, object $catalog, object $quota): ?string
     {
         $projectId   = (int) $ctx['project_id'];
         $userId      = (int) $ctx['user_id'];
@@ -60,12 +62,20 @@ class CoverNoteGenerator extends Base
 
         $system = self::systemPrompt((string) ($ctx['style'] ?? ''));
         $budget = max(0, $catalog->getInputBudget($profileId, self::OUTPUT_RESERVE) - $catalog->countTokens($system, $profileId));
-        $payload = CoverNoteContext::assemble($header, $tasks, $budget, fn (string $s): int => $catalog->countTokens($s, $profileId));
+        $chars  = $quota->maxInputChars() - mb_strlen($system, 'UTF-8');
+        // A unit fits when the payload stays inside both the model's token budget and
+        // AiConnector's input cap (characters); assemble() sees that as a 0/1 cost against 0.
+        $payload = CoverNoteContext::assemble($header, $tasks, 0,
+            fn (string $s): int => $catalog->countTokens($s, $profileId) <= $budget && mb_strlen($s, 'UTF-8') <= $chars ? 0 : 1);
 
         $messages = [
             ['role' => 'system', 'content' => $system],
             ['role' => 'user',   'content' => $payload],
         ];
+        $refusal = $quota->consume($userId, 'timeinvoice.cover_note', array_column($messages, 'content'));
+        if ($refusal !== null) {
+            throw new CoverNoteRefused($refusal);
+        }
         $result = $registry->structured($messages, self::SCHEMA, $profileId);
         $note   = trim((string) ($result['cover_note'] ?? ''));
 
