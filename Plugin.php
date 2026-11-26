@@ -58,7 +58,7 @@ class Plugin extends Base
 
     public function getPluginName(): string        { return 'TimeInvoice'; }
     public function getPluginAuthor(): string      { return 'Carmelo Santana'; }
-    public function getPluginVersion(): string     { return '1.2.5'; }
+    public function getPluginVersion(): string     { return '1.2.6'; }
     public function getPluginLicense(): string     { return 'MIT'; }
     public function getPluginHomepage(): string    { return 'https://github.com/carmelosantana/kanboard-time-invoice'; }
     public function getCompatibleVersion(): string { return '>=1.2.47'; }

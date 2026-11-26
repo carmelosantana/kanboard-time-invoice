@@ -44,7 +44,7 @@ class PluginMetaTest extends Base
         $j = $this->json();
         $this->assertArrayHasKey('recommends', $j, 'v1.1.0 recommends AiConnector');
         $this->assertSame(['AiConnector'], array_column($j['recommends'], 'plugin'));
-        $this->assertSame('1.1.0', $j['recommends'][0]['min_version']);
+        $this->assertSame('1.3.0', $j['recommends'][0]['min_version']); // AiQuota, the shared AI limits
         $this->assertStringStartsNotWith('>=', $j['recommends'][0]['min_version']);
         $this->assertNotEmpty($j['recommends'][0]['reason']);
     }
