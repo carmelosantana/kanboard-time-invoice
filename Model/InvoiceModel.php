@@ -59,6 +59,13 @@ class InvoiceModel extends Base
         return $record === null || ($record['status'] ?? '') === 'draft';
     }
 
+    /** The project a stored invoice belongs to, or null when no invoice has this id. */
+    public function projectIdOf(string $id): ?int
+    {
+        $pid = $this->db->table(self::TABLE)->eq('id', $id)->findOneColumn('project_id');
+        return ($pid === null || $pid === false) ? null : (int) $pid;
+    }
+
     public function load(int $projectId, string $id): ?array
     {
         $raw = $this->db->table(self::TABLE)

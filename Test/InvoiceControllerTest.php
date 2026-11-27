@@ -567,7 +567,7 @@ class InvoiceControllerTest extends Base
         $this->assertMatchesRegularExpression('/function aiReady\(\)[^}]*aiQuota\(\)/s', $src);
     }
 
-    private function routedController(string $resolved, array &$seen, array $post): InvoiceController
+    private function routedController(string $resolved, array &$seen, array $post, ?callable $before = null): InvoiceController
     {
         $this->createInvoiceSchema();
         $this->container['timeReportModel'] = fn ($x) => new \stdClass();
@@ -580,6 +580,7 @@ class InvoiceControllerTest extends Base
             'project_id' => (string) $pid,
         ]);
         $seen['pid'] = $pid;
+        if ($before !== null) { $before($pid, $member); }
         $this->container['response'] = new class($this->container, $seen) extends \Kanboard\Core\Http\Response {
             public function __construct($c, private array &$seen) { parent::__construct($c); }
             public function json(array $data, $statusCode = 200) { $this->seen['json'] = [$data, $statusCode]; }
@@ -635,5 +636,39 @@ class InvoiceControllerTest extends Base
     {
         $src = file_get_contents(dirname(__DIR__) . '/Controller/InvoiceController.php');
         $this->assertMatchesRegularExpression("/function aiReady\\(\\)[^}]*method_exists\\([^)]*'resolve'\\)/s", $src);
+    }
+
+    public function testAnExistingInvoiceCannotBeRedirectedToAnotherProject(): void
+    {
+        $seen = [];
+        $other = 0;
+        $c = $this->routedController('p-resolved', $seen, ['id' => 'inv-a'], function (int $pid, int $member) use (&$other, &$seen) {
+            $pm = new \Kanboard\Model\ProjectModel($this->container);
+            $other = $pm->create(['name' => 'Other']);
+            $this->container['projectUserRoleModel']->addUser($other, $member, \Kanboard\Core\Security\Role::PROJECT_MEMBER);
+            // The invoice lives in project A ($pid), but the post claims project B.
+            (new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($this->container))
+                ->createDraft($pid, $member, ['id' => 'inv-a', 'range' => ['start' => '2026-08-01', 'end' => '2026-08-31']]);
+            $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], [
+                'csrf_token' => $this->container['token']->getCSRFToken(),
+                'project_id' => (string) $other, 'id' => 'inv-a', 'ai_profile' => 'x',
+            ]);
+        });
+        $c->generateCoverNote();
+        $this->assertArrayNotHasKey('resolve', $seen, 'no resolve() for a forged project');
+        $this->assertArrayNotHasKey('ctx', $seen, 'no AI call for a forged project');
+        $this->assertSame(400, $seen['json'][1]);
+    }
+
+    public function testAnExistingInvoiceWithItsOwnProjectStillGenerates(): void
+    {
+        $seen = [];
+        $c = $this->routedController('p-resolved', $seen, ['id' => 'inv-a'], function (int $pid, int $member) {
+            (new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($this->container))
+                ->createDraft($pid, $member, ['id' => 'inv-a', 'range' => ['start' => '2026-08-01', 'end' => '2026-08-31']]);
+        });
+        $c->generateCoverNote();
+        $this->assertSame($seen['pid'], $seen['resolve'][1]);
+        $this->assertSame([['note' => 'A note.'], 200], $seen['json']);
     }
 }

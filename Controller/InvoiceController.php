@@ -555,6 +555,14 @@ class InvoiceController extends BaseController
         $values = $this->request->getValues();
         $projectId = $this->requestProjectId($values);
 
+        // A stored invoice belongs to its own project: a posted project_id that disagrees is a forgery.
+        $invoiceId = (string) ($values['id'] ?? '');
+        $storedProject = $invoiceId !== '' ? $this->invoiceModel->projectIdOf($invoiceId) : null;
+        if ($storedProject !== null && $storedProject !== $projectId) {
+            $this->response->json(['error' => t('Not available for this project.')], 400);
+            return;
+        }
+
         // Drafting a cover note is invoice writing, and it spends the provider's credit: viewers may not.
         if (! $this->canWriteInvoices($projectId, $userId) || ! $this->hasTimeReport()) {
             $this->response->json(['error' => t('Not available for this project.')], 400);
