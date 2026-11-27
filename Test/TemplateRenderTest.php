@@ -113,7 +113,7 @@ class TemplateRenderTest extends Base
                 'granularity' => 'task', 'rate' => 150.0, 'tax_enabled' => false, 'tax_rate' => 0.0,
                 'terms_days' => 30, 'notes' => '', 'client' => ['name' => 'Acme', 'address' => '', 'email' => ''],
             ],
-            'ai_ready' => false, 'ai_profiles' => [], 'ai_default_profile' => '',
+            'ai_ready' => false, 'ai_options' => ['show' => false, 'profiles' => [], 'selected' => ''],
             'unbilled' => $this->silent(),
         ]);
 
@@ -185,7 +185,7 @@ class TemplateRenderTest extends Base
                 'granularity' => 'task', 'rate' => 150.0, 'tax_enabled' => false, 'tax_rate' => 0.0,
                 'terms_days' => 30, 'notes' => '', 'client' => ['name' => '', 'address' => '', 'email' => ''],
             ],
-            'ai_ready' => false, 'ai_profiles' => [], 'ai_default_profile' => '',
+            'ai_ready' => false, 'ai_options' => ['show' => false, 'profiles' => [], 'selected' => ''],
             'unbilled' => $this->silent(),
         ]);
 
@@ -212,7 +212,7 @@ class TemplateRenderTest extends Base
                 'granularity' => 'task', 'rate' => 150.0, 'tax_enabled' => false, 'tax_rate' => 0.0,
                 'terms_days' => 30, 'notes' => '', 'client' => ['name' => '', 'address' => '', 'email' => ''],
             ],
-            'ai_ready' => false, 'ai_profiles' => [], 'ai_default_profile' => '',
+            'ai_ready' => false, 'ai_options' => ['show' => false, 'profiles' => [], 'selected' => ''],
             'unbilled' => $this->silent(),
         ]);
 

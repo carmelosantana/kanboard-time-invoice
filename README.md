@@ -29,7 +29,7 @@ attachment. Download or view the PDF and send it however you normally do.
 
 > **Multi-person projects:** this version bills only *your own* hours. Where
 > other people have logged time in the range, the invoice form warns you. Billing
-> several people, each at their own rate, arrives in 1.3.0.
+> several people, each at their own rate, is planned for a later release.
 
 ## Storage
 

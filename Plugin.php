@@ -35,6 +35,11 @@ class Plugin extends Base
         // Its own rule: the old shared name SettingsController took core's admin rule; this one would fall to the app-user default (#7337).
         $this->applicationAccessMap->add('TimeInvoiceSettingsController', '*', Role::APP_ADMIN);
 
+        // Model routing (AiConnector 1.4.0+): the hook is core, so registering works without AiConnector.
+        $this->hook->on('aiconnector:features', fn () => [
+            ['id' => 'timeinvoice.cover_note', 'label' => t('Invoice cover note'), 'plugin' => 'TimeInvoice'],
+        ]);
+
         // Entry points.
         $this->template->hook->attach('template:project:sidebar', 'TimeInvoice:invoice/sidebar');
         $this->template->hook->attach('template:header:dropdown', 'TimeInvoice:invoice/header_dropdown');
@@ -58,7 +63,7 @@ class Plugin extends Base
 
     public function getPluginName(): string        { return 'TimeInvoice'; }
     public function getPluginAuthor(): string      { return 'Carmelo Santana'; }
-    public function getPluginVersion(): string     { return '1.2.6'; }
+    public function getPluginVersion(): string     { return '1.3.0'; }
     public function getPluginLicense(): string     { return 'MIT'; }
     public function getPluginHomepage(): string    { return 'https://github.com/carmelosantana/kanboard-time-invoice'; }
     public function getCompatibleVersion(): string { return '>=1.2.47'; }

@@ -26,8 +26,10 @@ class FakeRegistry
 {
     public array $messages = [];
     public string $schema = '';
+    public ?string $profileId = null;
     public function structured(array $messages, string $schema, ?string $profileId): array
     {
+        $this->profileId = $profileId;
         $this->messages = $messages;
         $this->schema = $schema;
         return ['cover_note' => 'We rebuilt the homepage hero this period.'];
@@ -37,8 +39,9 @@ class FakeRegistry
 /** Fake ModelCatalog — fixed budget + a chars/4 counter. */
 class FakeCatalog
 {
-    public function getInputBudget(?string $profileId = null, int $reserve = 1024): int { return 100000; }
-    public function countTokens(string $text, ?string $profileId = null): int { return (int) ceil(mb_strlen($text) / 4); }
+    public array $ids = [];
+    public function getInputBudget(?string $profileId = null, int $reserve = 1024): int { $this->ids[] = $profileId; return 100000; }
+    public function countTokens(string $text, ?string $profileId = null): int { $this->ids[] = $profileId; return (int) ceil(mb_strlen($text) / 4); }
 }
 
 /** Fake AiConnector AiQuota — records the check, refuses when told to. */
@@ -74,6 +77,18 @@ class CoverNoteGeneratorTest extends Base
             public function __construct(private array $b) {}
             public function report($pid, $s, $e, $g, $d, $u) { return ['breakdown' => $this->b]; }
         };
+    }
+
+    public function testTheResolvedProfileDrivesStructuredAndTheCatalogSizing(): void
+    {
+        $this->withReport([['key' => '1', 'label' => 'x', 'hours' => 1.0, 'task_count' => 1, 'task_ids' => [1]]]);
+        $gen = new CoverNoteGeneratorForTest($this->container);
+        $reg = new FakeRegistry();
+        $cat = new FakeCatalog();
+        $gen->generate(['profile_id' => 'resolved-1'] + $this->ctx(), $reg, $cat, new FakeQuota());
+        $this->assertSame('resolved-1', $reg->profileId);
+        $this->assertNotEmpty($cat->ids);
+        $this->assertSame(['resolved-1'], array_values(array_unique($cat->ids)), 'every sizing call gets the resolved id');
     }
 
     public function testGathersUnionOfBreakdownTaskIds(): void

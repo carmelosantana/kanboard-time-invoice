@@ -123,23 +123,21 @@ class InvoiceController extends BaseController
         return class_exists($cls) ? new $cls($this->container) : null;
     }
 
-    /** The three AiConnector classes must exist (1.3.0+) AND a provider must be usable. */
+    /** The three AiConnector classes must exist, the routing API (1.4.0+) must be there AND a provider must be usable. */
     protected function aiReady(): bool
     {
         $reg = $this->aiRegistry();
-        return $reg !== null && $this->aiCatalog() !== null && $this->aiQuota() !== null && $reg->isReady();
+        return method_exists('\\Kanboard\\Plugin\\AiConnector\\Model\\ProviderRegistry', 'resolve')
+            && $reg !== null && $this->aiCatalog() !== null && $this->aiQuota() !== null && $reg->isReady();
     }
 
-    protected function aiProfiles(): array
+    /** The shared picker's options for the cover-note feature in this project; hidden when AI is not ready. */
+    protected function aiOptions(int $projectId): array
     {
-        $reg = $this->aiRegistry();
-        return $reg !== null ? $reg->listProfiles() : [];
-    }
-
-    protected function aiDefaultProfile(): string
-    {
-        $reg = $this->aiRegistry();
-        return $reg !== null ? (string) $reg->getDefaultProfileId() : '';
+        $reg = $this->aiReady() ? $this->aiRegistry() : null;
+        return $reg !== null
+            ? $reg->pickerOptions('timeinvoice.cover_note', $projectId)
+            : ['show' => false, 'profiles' => [], 'selected' => ''];
     }
 
     /** Cross-project invoice list + outstanding total. */
@@ -273,8 +271,7 @@ class InvoiceController extends BaseController
             'project'            => $this->projectModel->getById($projectId),
             'values'             => $values,
             'ai_ready'           => $this->aiReady(),
-            'ai_profiles'        => $this->aiProfiles(),
-            'ai_default_profile' => $this->aiDefaultProfile(),
+            'ai_options'         => $this->aiOptions($projectId),
             'unbilled'           => $this->unbilledParticipants(
                 $projectId,
                 (string) $values['start_date'],
@@ -537,7 +534,6 @@ class InvoiceController extends BaseController
             'client'       => ['name' => (string) ($v['client_name'] ?? '')],
             'currency'     => $this->globalDefaults()['currency'] ?? ['code' => 'USD', 'symbol' => '$'],
             'style'        => (string) $this->configModel->get('timeinvoice_ai_style', ''),
-            'profile_id'   => ($v['profile_id'] ?? '') !== '' ? (string) $v['profile_id'] : null,
         ];
     }
 
@@ -565,11 +561,20 @@ class InvoiceController extends BaseController
             return;
         }
         if (! $this->aiReady()) {
-            $this->response->json(['error' => t('AI cover notes need the AiConnector plugin (1.3.0+) with a configured provider.')], 400);
+            $this->response->json(['error' => t('AI cover notes need the AiConnector plugin (1.4.0+) with a configured provider.')], 400);
+            return;
+        }
+
+        // The posted pick is only a request: resolve() decides which profile runs for this project.
+        $pick = (string) ($values['ai_profile'] ?? '');
+        $profile = (string) $this->aiRegistry()->resolve('timeinvoice.cover_note', $projectId, $pick !== '' ? $pick : null);
+        if ($profile === '') {
+            $this->response->json(['error' => t('AI cover notes need the AiConnector plugin (1.4.0+) with a configured provider.')], 400);
             return;
         }
 
         $ctx = $this->coverNoteContext($values, $projectId, $userId);
+        $ctx['profile_id'] = $profile;
         try {
             $note = $this->coverNoteGenerator->generate($ctx, $this->aiRegistry(), $this->aiCatalog(), $this->aiQuota());
         } catch (CoverNoteRefused $e) {

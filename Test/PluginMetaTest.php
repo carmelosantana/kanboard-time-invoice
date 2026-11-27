@@ -44,9 +44,22 @@ class PluginMetaTest extends Base
         $j = $this->json();
         $this->assertArrayHasKey('recommends', $j, 'v1.1.0 recommends AiConnector');
         $this->assertSame(['AiConnector'], array_column($j['recommends'], 'plugin'));
-        $this->assertSame('1.3.0', $j['recommends'][0]['min_version']); // AiQuota, the shared AI limits
+        $this->assertSame('1.4.0', $j['recommends'][0]['min_version']); // model routing: resolve() and the picker partial
         $this->assertStringStartsNotWith('>=', $j['recommends'][0]['min_version']);
         $this->assertNotEmpty($j['recommends'][0]['reason']);
+    }
+
+    public function testCoverNoteFeatureIsRegisteredForRouting(): void
+    {
+        $plugin = new \Kanboard\Plugin\TimeInvoice\Plugin($this->container);
+        $plugin->initialize();
+        $found = [];
+        foreach ($this->container['hook']->getListeners('aiconnector:features') as $l) {
+            foreach ($l() as $f) { $found[$f['id']] = $f; }
+        }
+        $this->assertArrayHasKey('timeinvoice.cover_note', $found);
+        $this->assertSame('TimeInvoice', $found['timeinvoice.cover_note']['plugin']);
+        $this->assertNotSame('', $found['timeinvoice.cover_note']['label']);
     }
 
     public function testPluginPhpVersionMatchesJson(): void

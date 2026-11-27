@@ -39,12 +39,7 @@
 
     <?php if (! empty($ai_ready)): ?>
         <div class="timeinvoice-ai">
-            <?= $this->form->label(t('AI provider'), 'profile_id') ?>
-            <select class="timeinvoice-profile" name="profile_id" id="form-profile_id">
-                <?php foreach ($ai_profiles as $p): ?>
-                    <option value="<?= $this->text->e($p['id']) ?>"<?= $p['id'] === $ai_default_profile ? ' selected' : '' ?>><?= $this->text->e($p['label']) ?></option>
-                <?php endforeach ?>
-            </select>
+            <?= $this->render('AiConnector:picker/select', ['options' => $ai_options]) ?>
             <button type="button" class="btn timeinvoice-generate-note"
                     data-url="<?= $this->url->href('InvoiceController', 'generateCoverNote', array('plugin' => 'TimeInvoice')) ?>">
                 <?= t('Generate cover note') ?>

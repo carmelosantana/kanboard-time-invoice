@@ -64,18 +64,6 @@ class InvoiceControllerTest extends Base
         $this->assertFalse($m->invoke($c), 'no AiConnector classes loaded → not ready');
     }
 
-    public function testAiProfilesEmptyWithoutAiConnector(): void
-    {
-        $this->createInvoiceSchema();
-        $c = new InvoiceController($this->container);
-        $m = new ReflectionMethod($c, 'aiProfiles');
-        $m->setAccessible(true);
-        $this->assertSame([], $m->invoke($c));
-        $d = new ReflectionMethod($c, 'aiDefaultProfile');
-        $d->setAccessible(true);
-        $this->assertSame('', $d->invoke($c));
-    }
-
     public function testPdfPreviewForDraftRendersBytes(): void
     {
         $this->createInvoiceSchema();
@@ -108,7 +96,7 @@ class InvoiceControllerTest extends Base
         $v = [
             'start_date' => '2026-08-01', 'end_date' => '2026-08-31', 'granularity' => 'week',
             'rate' => '150', 'tax_enabled' => '1', 'tax_rate' => '10',
-            'client_name' => 'Acme Inc', 'profile_id' => '',
+            'client_name' => 'Acme Inc', 'ai_profile' => 'forged',
         ];
         $ctx = $m->invoke($c, $v, $pid, 1);
         $this->assertSame($pid, $ctx['project_id']);
@@ -118,7 +106,7 @@ class InvoiceControllerTest extends Base
         $this->assertTrue($ctx['tax_enabled']);
         $this->assertSame('Acme Inc', $ctx['client']['name']);
         $this->assertSame('Acme', $ctx['project_name']);
-        $this->assertNull($ctx['profile_id'], 'empty profile_id maps to null (use default)');
+        $this->assertArrayNotHasKey('profile_id', $ctx, 'the raw post never reaches the generator context; resolve() supplies it');
     }
 
     public function testCoverNoteContextClampsBadGranularityAndDates(): void
@@ -128,10 +116,9 @@ class InvoiceControllerTest extends Base
         $c = new InvoiceController($this->container);
         $m = new ReflectionMethod($c, 'coverNoteContext');
         $m->setAccessible(true);
-        $ctx = $m->invoke($c, ['granularity' => 'bogus', 'start_date' => 'nope', 'profile_id' => 'p2'], $pid, 1);
+        $ctx = $m->invoke($c, ['granularity' => 'bogus', 'start_date' => 'nope'], $pid, 1);
         $this->assertSame('task', $ctx['granularity'], 'invalid granularity falls back to task');
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', $ctx['start']);
-        $this->assertSame('p2', $ctx['profile_id']);
     }
 
     /**
@@ -564,7 +551,7 @@ class InvoiceControllerTest extends Base
         };
         $c = new class($this->container) extends InvoiceController {
             protected function aiReady(): bool { return true; }
-            protected function aiRegistry(): ?object { return new \stdClass(); }
+            protected function aiRegistry(): ?object { return new class { public function resolve(string $f, ?int $p = null, ?string $k = null): string { return 'p1'; } }; }
             protected function aiCatalog(): ?object { return new \stdClass(); }
             protected function aiQuota(): ?object { return new \stdClass(); }
             protected function coverNoteContext(array $values, int $projectId, int $userId): array { return []; }
@@ -578,5 +565,75 @@ class InvoiceControllerTest extends Base
     {
         $src = file_get_contents(dirname(__DIR__) . '/Controller/InvoiceController.php');
         $this->assertMatchesRegularExpression('/function aiReady\(\)[^}]*aiQuota\(\)/s', $src);
+    }
+
+    private function routedController(string $resolved, array &$seen, array $post): InvoiceController
+    {
+        $this->createInvoiceSchema();
+        $this->container['timeReportModel'] = fn ($x) => new \stdClass();
+        $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Billing']);
+        $member = (new \Kanboard\Model\UserModel($this->container))->create(['username' => 'member', 'name' => 'Member']);
+        $this->container['projectUserRoleModel']->addUser($pid, $member, \Kanboard\Core\Security\Role::PROJECT_MEMBER);
+        $_SESSION['user'] = ['id' => $member, 'role' => \Kanboard\Core\Security\Role::APP_USER];
+        $this->container['request'] = new \Kanboard\Core\Http\Request($this->container, [], [], $post + [
+            'csrf_token' => $this->container['token']->getCSRFToken(),
+            'project_id' => (string) $pid,
+        ]);
+        $seen['pid'] = $pid;
+        $this->container['response'] = new class($this->container, $seen) extends \Kanboard\Core\Http\Response {
+            public function __construct($c, private array &$seen) { parent::__construct($c); }
+            public function json(array $data, $statusCode = 200) { $this->seen['json'] = [$data, $statusCode]; }
+        };
+        $this->container['coverNoteGenerator'] = function ($x) use (&$seen) { return new class($seen) {
+            public function __construct(private array &$seen) {}
+            public function generate(array $ctx, object $r, object $c, ?object $q = null): ?string
+            {
+                $this->seen['ctx'] = $ctx;
+                return 'A note.';
+            }
+        }; };
+        return new class($this->container, $resolved, $seen) extends InvoiceController {
+            public function __construct($c, private string $resolved, private array &$seen) { parent::__construct($c); }
+            protected function aiReady(): bool { return true; }
+            protected function aiRegistry(): ?object
+            {
+                $seen = &$this->seen; $resolved = $this->resolved;
+                return new class($seen, $resolved) {
+                    public function __construct(private array &$seen, private string $resolved) {}
+                    public function resolve(string $feature, ?int $projectId = null, ?string $pick = null): string
+                    {
+                        $this->seen['resolve'] = [$feature, $projectId, $pick];
+                        return $this->resolved;
+                    }
+                };
+            }
+            protected function aiCatalog(): ?object { return new \stdClass(); }
+            protected function aiQuota(): ?object { return new \stdClass(); }
+        };
+    }
+
+    public function testCoverNoteResolvesWithTheInvoicesProjectAndThePostedPick(): void
+    {
+        $seen = [];
+        $c = $this->routedController('p-resolved', $seen, ['ai_profile' => 'p-picked']);
+        $c->generateCoverNote();
+        $this->assertSame(['timeinvoice.cover_note', $seen['pid'], 'p-picked'], $seen['resolve']);
+        $this->assertSame('p-resolved', $seen['ctx']['profile_id'], 'the resolved id, never the raw post, reaches the generator');
+        $this->assertSame([['note' => 'A note.'], 200], $seen['json']);
+    }
+
+    public function testCoverNoteWithNothingReadyIsUnavailableAndCallsNothing(): void
+    {
+        $seen = [];
+        $c = $this->routedController('', $seen, ['ai_profile' => 'p-picked']);
+        $c->generateCoverNote();
+        $this->assertArrayNotHasKey('ctx', $seen, 'resolve() returning empty makes no AI call');
+        $this->assertSame(400, $seen['json'][1]);
+    }
+
+    public function testAiReadyNeedsTheRoutingApi(): void
+    {
+        $src = file_get_contents(dirname(__DIR__) . '/Controller/InvoiceController.php');
+        $this->assertMatchesRegularExpression("/function aiReady\\(\\)[^}]*method_exists\\([^)]*'resolve'\\)/s", $src);
     }
 }

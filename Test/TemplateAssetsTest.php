@@ -41,8 +41,8 @@ class TemplateAssetsTest extends Base
         $src = file_get_contents($this->root() . '/Template/invoice/form.php');
         $this->assertStringContainsString('ai_ready', $src, 'AI block must be gated on ai_ready');
         $this->assertStringContainsString('timeinvoice-generate-note', $src, 'generate button present');
-        $this->assertStringContainsString('timeinvoice-profile', $src, 'profile select present');
-        $this->assertStringContainsString('id="form-profile_id"', $src, 'profile select id matches its label for=');
+        $this->assertStringContainsString("'AiConnector:picker/select'", $src, 'the shared picker partial renders the profile select');
+        $this->assertStringNotContainsString('profile_id', $src, 'the old own-select field is gone');
         $this->assertStringContainsString("'generateCoverNote'", $src, 'button targets the generate action');
     }
 
