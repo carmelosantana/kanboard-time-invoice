@@ -529,6 +529,7 @@ class InvoiceControllerTest extends Base
     public function testAQuotaRefusalAnswers429WithTheReason(): void
     {
         $this->createInvoiceSchema();
+        $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
         $this->container['timeReportModel'] = fn ($x) => new \stdClass();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Billing']);
         $member = (new \Kanboard\Model\UserModel($this->container))->create(['username' => 'member', 'name' => 'Member']);
@@ -570,6 +571,7 @@ class InvoiceControllerTest extends Base
     private function routedController(string $resolved, array &$seen, array $post, ?callable $before = null): InvoiceController
     {
         $this->createInvoiceSchema();
+        $this->container['invoiceModel'] = fn ($c) => new \Kanboard\Plugin\TimeInvoice\Model\InvoiceModel($c);
         $this->container['timeReportModel'] = fn ($x) => new \stdClass();
         $pid = (new \Kanboard\Model\ProjectModel($this->container))->create(['name' => 'Billing']);
         $member = (new \Kanboard\Model\UserModel($this->container))->create(['username' => 'member', 'name' => 'Member']);
